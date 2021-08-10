@@ -1,0 +1,64 @@
+{
+    // IntelliSense を使用して利用可能な属性を学べます。
+    // 既存の属性の説明をホバーして表示します。
+    // 詳細情報は次を確認してください: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'combinatorial_optimization_solver'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=combinatorial_optimization_solver",
+                    "--package=combinatorial_optimization_solver"
+                ],
+                "filter": {
+                    "name": "combinatorial_optimization_solver",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'combinatorial_optimization_solver'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=combinatorial_optimization_solver"
+                ],
+                "filter": {
+                    "name": "combinatorial_optimization_solver",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'combinatorial_optimization_solver'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=combinatorial_optimization_solver",
+                    "--package=combinatorial_optimization_solver"
+                ],
+                "filter": {
+                    "name": "combinatorial_optimization_solver",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}
