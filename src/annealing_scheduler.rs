@@ -1,4 +1,4 @@
-use rayon::{prelude::*, ThreadPoolBuilder};
+use rayon::{prelude::*, ThreadPool, ThreadPoolBuilder};
 use std::{rc::Rc, sync::mpsc};
 
 use crate::solver::{
@@ -36,7 +36,7 @@ impl AnnealingScheduler {
             let record: Vec<SolutionRecord> = solver_parallel
                 .par_iter_mut()
                 .map(|s| s.solve())
-                .inspect(|s| println!("{}", &s))
+                .inspect(|s| println!("{}\n", &s))
                 .collect();
 
             records.push(record);
@@ -52,7 +52,7 @@ impl AnnealingScheduler {
             let best_record = record.iter().fold(
                 {
                     let mut init = SolutionRecord::default();
-                    init.energy = f64::MAX;
+                    init.energy = f64::NAN;
                     init
                 },
                 |acc, r| {
