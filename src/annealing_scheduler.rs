@@ -52,7 +52,7 @@ impl AnnealingScheduler {
             let best_record = record.iter().fold(
                 {
                     let mut init = SolutionRecord::default();
-                    init.energy = f64::NAN;
+                    init.energy = f64::MAX;
                     init
                 },
                 |acc, r| {
