@@ -49,8 +49,8 @@ async fn main() {
 
     let ising = Arc::new(IsingModel::new(J, h));
 
-    let steps = 3e2 as usize;
-    let try_number_of_times = 10;
+    let steps = 3e5 as usize;
+    let try_number_of_times = 300;
     let range_param_start = 3.;
     let range_param_end = 1e-06;
     let solvers = vec![
@@ -107,7 +107,10 @@ async fn main() {
             ));
         }
         e.title("Result")
-            .description(format!("sum {}; m {}", sum, m))
+            .description(format!(
+                "sum {}; m {}; try_number_of_times {}",
+                &sum, &m, &try_number_of_times
+            ))
             .fields(fields)
     });
 
