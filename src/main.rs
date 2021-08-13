@@ -49,8 +49,8 @@ async fn main() {
 
     let ising = Arc::new(IsingModel::new(J, h));
 
-    let steps = 3e5 as usize;
-    let try_number_of_times = 300;
+    let steps = 3e2 as usize;
+    let try_number_of_times = 10;
     let range_param_start = 3.;
     let range_param_end = 1e-06;
     let solvers = vec![
@@ -98,7 +98,7 @@ async fn main() {
         let mut fields = Vec::new();
         for ar in &analysis_records {
             fields.push((
-                format!("{}\n{}", ar.solver_name, ar.parameter),
+                format!("{}\nparameter {}", ar.solver_name, ar.parameter),
                 format!(
                     "[best {}; ave {};]\nbits {}",
                     ar.best_energy, ar.average_energy, ar.best_state
@@ -106,11 +106,13 @@ async fn main() {
                 false,
             ));
         }
-        e.title("Result").fields(fields)
+        e.title("Result")
+            .description(format!("sum {}; m {}", sum, m))
+            .fields(fields)
     });
 
     let webhook = Webhook::new(&url);
-    webhook.send(embed).await;
+    webhook.send(embed).await.unwrap();
 
     //     for record in &records {
     //         let cost = record
