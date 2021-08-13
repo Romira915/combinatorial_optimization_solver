@@ -1,28 +1,26 @@
 use rayon::{prelude::*, ThreadPoolBuilder};
-use std::sync::mpsc;
+use std::{rc::Rc, sync::mpsc};
 
-use crate::solver::{SolutionRecord, Solver, StatisticsRecord};
+use crate::solver::{
+    simulated_annealing::SimulatedAnnealing,
+    simulated_quantum_annealing::SimulatedQuantumAnnealing, SolutionRecord, Solver, SolverVariant,
+    StatisticsRecord,
+};
 
-pub struct AnnealingScheduler<T>
-where
-    T: Solver + Send + Sync + Sized,
-{
-    solvers: Vec<Box<T>>,
+pub struct AnnealingScheduler {
+    solvers: Vec<SolverVariant>,
     try_number_of_times: usize,
 }
 
-impl<T> AnnealingScheduler<T>
-where
-    T: Solver + Send + Sync + Sized,
-{
-    pub fn new(solvers: Vec<Box<T>>, try_number_of_times: usize) -> Self {
+impl AnnealingScheduler {
+    pub fn new(solvers: Vec<SolverVariant>, try_number_of_times: usize) -> Self {
         AnnealingScheduler {
             solvers,
             try_number_of_times,
         }
     }
 
-    pub fn run(&mut self) -> Vec<Vec<SolutionRecord>> {
+    pub fn run(&self) -> Vec<Vec<SolutionRecord>> {
         let cpus = num_cpus::get();
         ThreadPoolBuilder::new()
             .num_threads(cpus)
@@ -33,10 +31,13 @@ where
 
         for solver in &self.solvers {
             let mut solver_parallel = Vec::new();
-            solver_parallel.resize_with(self.try_number_of_times, || solver.clone_solver());
+            solver_parallel.resize_with(self.try_number_of_times, || solver.clone());
 
-            let mut record: Vec<SolutionRecord> =
-                solver_parallel.par_iter_mut().map(|s| s.solve()).collect();
+            let record: Vec<SolutionRecord> = solver_parallel
+                .par_iter_mut()
+                .map(|s| s.solve())
+                .inspect(|s| println!("{}", &s))
+                .collect();
 
             records.push(record);
         }
@@ -44,7 +45,7 @@ where
         records
     }
 
-    fn analysis(records: &mut Vec<Vec<SolutionRecord>>) -> Vec<StatisticsRecord> {
+    pub fn analysis(records: &Vec<Vec<SolutionRecord>>) -> Vec<StatisticsRecord> {
         let mut statistics_records = Vec::new();
 
         for record in records {

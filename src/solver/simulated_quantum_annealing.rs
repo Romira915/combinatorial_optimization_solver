@@ -131,7 +131,7 @@ impl Solver for SimulatedQuantumAnnealing {
         self.record.clone()
     }
 
-    fn clone_solver(&self) -> Box<dyn Solver> {
+    fn clone_solver(&self) -> Self {
         let mut rng = rand::rngs::StdRng::from_rng(rand::thread_rng()).unwrap();
 
         let obj = SimulatedQuantumAnnealing {
@@ -148,28 +148,28 @@ impl Solver for SimulatedQuantumAnnealing {
             record: self.record.clone(),
         };
 
-        Box::new(obj)
+        obj
     }
 }
 
-// impl Clone for SimulatedQuantumAnnealing {
-//     fn clone(&self) -> Self {
-//         let mut rng = rand::rngs::StdRng::from_rng(rand::thread_rng()).unwrap();
-//         SimulatedQuantumAnnealing {
-//             G0: self.G0.clone(),
-//             Gf: self.Gf.clone(),
-//             T: self.T.clone(),
-//             steps: self.steps.clone(),
-//             N: self.N.clone(),
-//             P: self.P.clone(),
-//             PT: self.PT.clone(),
-//             model: self.model.clone(),
-//             spins: IsingModel::init_trotter_spins(self.N, self.P, Self::IS_TROTTER_COPY, &mut rng),
-//             rng,
-//             record: self.record.clone(),
-//         }
-//     }
-// }
+impl Clone for SimulatedQuantumAnnealing {
+    fn clone(&self) -> Self {
+        let mut rng = rand::rngs::StdRng::from_rng(rand::thread_rng()).unwrap();
+        SimulatedQuantumAnnealing {
+            G0: self.G0.clone(),
+            Gf: self.Gf.clone(),
+            T: self.T.clone(),
+            steps: self.steps.clone(),
+            N: self.N.clone(),
+            P: self.P.clone(),
+            PT: self.PT.clone(),
+            model: self.model.clone(),
+            spins: IsingModel::init_trotter_spins(self.N, self.P, Self::IS_TROTTER_COPY, &mut rng),
+            rng,
+            record: self.record.clone(),
+        }
+    }
+}
 
 trait OrdWithTuple {
     fn min(self, other: &Self) -> Self;

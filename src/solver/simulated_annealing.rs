@@ -80,7 +80,7 @@ impl Solver for SimulatedAnnealing {
         self.record.clone()
     }
 
-    fn clone_solver(&self) -> Box<dyn Solver> {
+    fn clone_solver(&self) -> Self {
         let mut rng = rand::rngs::StdRng::from_rng(rand::thread_rng()).unwrap();
         let obj = SimulatedAnnealing {
             T0: self.T0.clone(),
@@ -93,22 +93,22 @@ impl Solver for SimulatedAnnealing {
             record: self.record.clone(),
         };
 
-        Box::new(obj)
+        obj
     }
 }
 
-// impl Clone for SimulatedAnnealing {
-//     fn clone(&self) -> Self {
-//         let mut rng = rand::rngs::StdRng::from_rng(rand::thread_rng()).unwrap();
-//         SimulatedAnnealing {
-//             T0: self.T0.clone(),
-//             Tf: self.Tf.clone(),
-//             steps: self.steps.clone(),
-//             N: self.N.clone(),
-//             model: self.model.clone(),
-//             spins: IsingModel::init_spins(self.N, &mut rng),
-//             rng,
-//             record: self.record.clone(),
-//         }
-//     }
-// }
+impl Clone for SimulatedAnnealing {
+    fn clone(&self) -> Self {
+        let mut rng = rand::rngs::StdRng::from_rng(rand::thread_rng()).unwrap();
+        SimulatedAnnealing {
+            T0: self.T0.clone(),
+            Tf: self.Tf.clone(),
+            steps: self.steps.clone(),
+            N: self.N.clone(),
+            model: self.model.clone(),
+            spins: IsingModel::init_spins(self.N, &mut rng),
+            rng,
+            record: self.record.clone(),
+        }
+    }
+}

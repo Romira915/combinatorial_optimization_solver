@@ -6,6 +6,7 @@ version = "0.1.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+dotenv = "0.15.0"
 getset = "0.1.1"
 ndarray = "0.15.3"
 ndarray-linalg = {version = "0.14.0", features = ["openblas"]}
@@ -14,3 +15,7 @@ num-traits = "0.2.14"
 num_cpus = "1.13.0"
 rand = {version = "0.8.4"}
 rayon = "1.5.1"
+serde = "1.0.126"
+serde_json = "1.0.66"
+serenity = {version = "0.10.8", features = ["client", "framework", "standard_framework", "rustls_backend"]}
+tokio = {version = "1.10.0", features = ["macros", "rt-multi-thread"]}

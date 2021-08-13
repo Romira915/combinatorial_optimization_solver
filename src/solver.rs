@@ -7,10 +7,14 @@ use ndarray::{Array1, Array2};
 use ndarray_rand::rand_distr::WeightedAliasIndex;
 use rand::{prelude::SliceRandom, thread_rng, Rng};
 
+use self::{
+    simulated_annealing::SimulatedAnnealing, simulated_quantum_annealing::SimulatedQuantumAnnealing,
+};
+
 pub trait Solver {
     fn solve(&mut self) -> SolutionRecord;
     fn record(&self) -> Option<SolutionRecord>;
-    fn clone_solver(&self) -> Box<dyn Solver>;
+    fn clone_solver(&self) -> Self;
 }
 
 #[derive(Debug, Default, Clone)]
@@ -30,6 +34,12 @@ pub struct StatisticsRecord {
     pub parameter: String,
 }
 
+#[derive(Debug, Clone)]
+pub enum SolverVariant {
+    Sa(SimulatedAnnealing),
+    Sqa(SimulatedQuantumAnnealing),
+}
+
 impl Display for SolutionRecord {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -47,6 +57,15 @@ impl Display for StatisticsRecord {
             "{}\nbest {}; ave {};",
             self.parameter, self.best_energy, self.average_energy
         )
+    }
+}
+
+impl SolverVariant {
+    pub fn solve(&mut self) -> SolutionRecord {
+        match self {
+            Self::Sa(sa) => sa.solve(),
+            Self::Sqa(sqa) => sqa.solve(),
+        }
     }
 }
 
