@@ -1,7 +1,6 @@
 use std::{
     iter::Sum,
     ops::{Mul, MulAssign},
-    os::linux::raw::stat,
 };
 
 use getset::Getters;
