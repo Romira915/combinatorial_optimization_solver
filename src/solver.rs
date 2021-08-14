@@ -1,3 +1,4 @@
+pub mod annealing_scheduler;
 pub mod simulated_annealing;
 pub mod simulated_quantum_annealing;
 

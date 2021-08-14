@@ -2,8 +2,8 @@ use core::num;
 use std::env;
 use std::sync::Arc;
 
-use combinatorial_optimization_solver::annealing_scheduler::{self, AnnealingScheduler};
 use combinatorial_optimization_solver::model::{IsingModel, QuboModel};
+use combinatorial_optimization_solver::solver::annealing_scheduler::AnnealingScheduler;
 use combinatorial_optimization_solver::solver::simulated_annealing::SimulatedAnnealing;
 use combinatorial_optimization_solver::solver::simulated_quantum_annealing::SimulatedQuantumAnnealing;
 use combinatorial_optimization_solver::solver::{Solver, SolverVariant};
