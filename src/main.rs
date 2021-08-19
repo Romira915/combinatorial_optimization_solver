@@ -3,6 +3,7 @@ use std::env;
 use std::sync::Arc;
 
 use combinatorial_optimization_solver::model::{IsingModel, QuboModel};
+use combinatorial_optimization_solver::opt::TspNode;
 use combinatorial_optimization_solver::solver::annealing_scheduler::AnnealingScheduler;
 use combinatorial_optimization_solver::solver::simulated_annealing::SimulatedAnnealing;
 use combinatorial_optimization_solver::solver::simulated_quantum_annealing::SimulatedQuantumAnnealing;
@@ -13,6 +14,7 @@ use ndarray_linalg::Scalar;
 use rand::distributions::Uniform;
 use rand::{Rng, SeedableRng};
 use serenity::model::channel::Embed;
+use std::convert::TryFrom;
 
 #[tokio::main]
 async fn main() {

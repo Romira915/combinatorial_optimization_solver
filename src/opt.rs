@@ -5,6 +5,12 @@ use std::{
     path::Path,
 };
 
+use ndarray::{Array2, Array4};
+use num_traits::Pow;
+
+use crate::model::QuboModel;
+
+#[derive(Debug)]
 pub struct TspNode {
     data_name: String,
     dim: usize,
@@ -73,10 +79,10 @@ impl TryFrom<&str> for TspNode {
             let line = line.map_err(|e| e.to_string())?;
             let split = line.split_whitespace().collect::<Vec<&str>>();
             match split[0] {
-                "NAME" => {
+                "NAME:" => {
                     data_name = split.last().map(|s| s.to_string());
                 }
-                "DIMENSION" => {
+                "DIMENSION:" => {
                     dim = split
                         .last()
                         .map(|s| s.parse::<usize>().expect("Failed to usize parse"));
@@ -108,5 +114,17 @@ impl TryFrom<&str> for TspNode {
         } else {
             Err(err_message)
         }
+    }
+}
+
+impl From<TspNode> for QuboModel {
+    fn from(tsp: TspNode) -> Self {
+        let mut Q = Array4::zeros((tsp.dim, tsp.dim, tsp.dim, tsp.dim));
+
+        for i in 0..Q.len() {
+            for j in 0..Q.len() {}
+        }
+
+        Self
     }
 }
