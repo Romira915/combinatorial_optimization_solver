@@ -102,8 +102,8 @@ async fn main() {
             fields.push((
                 format!("{}\nparameter {}", ar.solver_name, ar.parameter),
                 format!(
-                    "[best {}; ave {};]\nbits {}",
-                    ar.best_energy, ar.average_energy, ar.best_state
+                    "[best {}; ave {}; worst {};]\nbits {}",
+                    ar.best_energy, ar.average_energy, ar.worst_energy, ar.best_state
                 ),
                 false,
             ));
