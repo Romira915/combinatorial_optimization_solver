@@ -65,12 +65,30 @@ impl AnnealingScheduler {
             );
             let best_energy = best_record.energy;
             let best_state = best_record.bits;
+
+            let worst_record = record.iter().fold(
+                {
+                    let mut init = SolutionRecord::default();
+                    init.energy = f64::MIN;
+                    init
+                },
+                |acc, r| {
+                    if acc.energy < r.energy {
+                        r.clone()
+                    } else {
+                        acc
+                    }
+                },
+            );
+            let worst_energy = worst_record.energy;
+
             let average_energy = record.iter().map(|r| r.energy).sum::<f64>() / record.len() as f64;
 
             statistics_records.push(StatisticsRecord {
                 solver_name: record[0].solver_name.clone(),
                 best_energy,
                 average_energy,
+                worst_energy,
                 best_state,
                 parameter: record[0].parameter.clone(),
             });

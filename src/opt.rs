@@ -7,6 +7,7 @@ use std::{
 
 use ndarray::{Array2, Array4};
 use num_traits::Pow;
+use tokio::net::ToSocketAddrs;
 
 use crate::model::QuboModel;
 
@@ -119,12 +120,22 @@ impl TryFrom<&str> for TspNode {
 
 impl From<TspNode> for QuboModel {
     fn from(tsp: TspNode) -> Self {
-        let mut Q = Array4::zeros((tsp.dim, tsp.dim, tsp.dim, tsp.dim));
-
-        for i in 0..Q.len() {
-            for j in 0..Q.len() {}
+        let mut Q = Array4::<f64>::zeros((tsp.dim, tsp.dim, tsp.dim, tsp.dim));
+        let mut indices = Vec::new();
+        for i in 0..tsp.dim {
+            for j in 0..tsp.dim {
+                for u in 0..tsp.dim {
+                    for v in 0..tsp.dim {
+                        indices.push((i, j, u, v));
+                    }
+                }
+            }
         }
 
-        Self
+        for (i, j, u, v) in indices {
+            Q[[i, j, u, v]] += tsp.distance(u, v);
+        }
+
+        QuboModel::new(Array2::zeros((0, 0)))
     }
 }

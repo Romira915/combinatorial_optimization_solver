@@ -31,6 +31,7 @@ pub struct StatisticsRecord {
     pub solver_name: String,
     pub best_energy: f64,
     pub average_energy: f64,
+    pub worst_energy: f64,
     pub best_state: Array1<i8>,
     pub parameter: String,
 }
