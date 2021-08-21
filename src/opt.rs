@@ -5,27 +5,44 @@ use std::{
     path::Path,
 };
 
+use getset::Getters;
 use ndarray::{Array2, Array4};
 use num_traits::{Pow, ToPrimitive, Zero};
 use tokio::net::ToSocketAddrs;
 
 use crate::model::QuboModel;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Getters)]
 pub struct TspNode {
+    #[get = "pub"]
     data_name: String,
+    #[get = "pub"]
     dim: usize,
+    #[get = "pub"]
     node: Vec<(f64, f64)>,
+    #[get = "pub"]
     opt: Option<Vec<usize>>,
-    opt_len: Option<usize>,
 }
 
 impl TspNode {
-    fn distance(&self, a: usize, b: usize) -> f64 {
+    pub fn distance(&self, a: usize, b: usize) -> f64 {
         let x_dist = (self.node[a].0 - self.node[b].0).abs();
         let y_dist = (self.node[a].1 - self.node[b].1).abs();
 
         (x_dist + y_dist).sqrt()
+    }
+
+    pub fn opt_len(&self) -> Option<f64> {
+        if let Some(opt) = &self.opt {
+            let mut len = 0.;
+            for (i, node) in opt.iter().enumerate() {
+                len += self.distance(*node, opt[(i + 1) % opt.len()]);
+            }
+
+            Some(len)
+        } else {
+            None
+        }
     }
 
     fn try_read_opt_file(&mut self, path: &Path) -> Result<(), String> {
@@ -42,13 +59,7 @@ impl TspNode {
             }
 
             match split[0] {
-                "COMMENT" => {
-                    self.opt_len = if let Ok(opt_len) = split.last().map(|s| s.parse()).unwrap() {
-                        Some(opt_len)
-                    } else {
-                        None
-                    }
-                }
+                "COMMENT" => {}
                 n => {
                     if let Ok(n) = n.parse() {
                         if n as isize != -1 {
@@ -115,7 +126,6 @@ impl TryFrom<&str> for TspNode {
                     dim,
                     node,
                     opt: None,
-                    opt_len: None,
                 };
                 node.try_read_opt_file(opt_path.as_path())?;
                 Ok(node)
@@ -155,7 +165,7 @@ impl From<TspNode> for QuboModel {
 
                         if (k == 1 || k == tsp.dim - 1) && u < v {
                             for r in 0..(tsp.dim.pow(2)) {
-                                Q[[ui, vj]] += tsp.distance(u, v) as f32;
+                                Q[[ui, vj]] += 0.25 * tsp.distance(u, v) as f32;
                             }
                         }
                     }

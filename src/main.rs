@@ -21,35 +21,12 @@ async fn main() {
     dotenv::dotenv().expect("Not found .env file");
     let url = env::var("WEBHOOK_URL").unwrap();
 
-    let n = 1000;
     let mut rng = rand::rngs::StdRng::from_rng(rand::thread_rng()).unwrap();
-    let numbers = (&mut rng)
-        .sample_iter(Uniform::new(0., 1.))
-        .take(n)
-        .collect::<Vec<f64>>();
-    let sum: f64 = numbers.iter().sum();
-    let m = sum * 0.5;
-    let J = {
-        let mut J = Array2::zeros((n, n));
-        for i in 0..n {
-            for j in 0..n {
-                J[[i, j]] = (numbers[i] * numbers[j]) as f32;
-            }
-        }
-        J /= 2.;
-        J
-    };
 
-    let h = {
-        let mut h = Array1::zeros(n);
-        let k = sum / 2. - m;
-        for i in 0..n {
-            h[i] = (k * numbers[i]) as f32;
-        }
-        h
-    };
-
-    let ising = Arc::new(IsingModel::new(J, h));
+    let tsp = TspNode::try_from("./dataset/ch150.tsp").unwrap();
+    let qubo = QuboModel::from(tsp.clone());
+    let ising = IsingModel::from(qubo);
+    let ising = Arc::new(ising);
 
     let steps = 3e5 as usize;
     let try_number_of_times = 300;
@@ -99,19 +76,43 @@ async fn main() {
     let embed = Embed::fake(move |e| {
         let mut fields = Vec::new();
         for ar in &analysis_records {
+            let (_crawl_order, best_len) = {
+                let mut crawl_order = Vec::new();
+                for (i, n) in ar.best_state.iter().enumerate() {
+                    if *n == 1 {
+                        crawl_order.push((i % tsp.dim(), i / tsp.dim()));
+                    }
+                }
+                crawl_order.sort();
+
+                let mut len = 0.;
+                for (i, node) in crawl_order.iter() {
+                    let next_index = crawl_order
+                        .iter()
+                        .find(|(index, _)| *index == (i + 1) % tsp.dim())
+                        .unwrap()
+                        .0;
+                    len += tsp.distance(*node, crawl_order[next_index].1);
+                }
+
+                (crawl_order, len)
+            };
             fields.push((
                 format!("{}\nparameter {}", ar.solver_name, ar.parameter),
                 format!(
-                    "[best {}; ave {}; worst {};]\nbits {}",
-                    ar.best_energy, ar.average_energy, ar.worst_energy, ar.best_state
+                    "[best {}; ave {}; worst {}; best_len {}]\nbits {}",
+                    ar.best_energy, ar.average_energy, ar.worst_energy, best_len, ar.best_state
                 ),
                 false,
             ));
         }
+        let strict_solution = tsp.opt_len().unwrap_or_default();
         e.title("Result")
             .description(format!(
-                "sum {}; m {}; try_number_of_times {}",
-                &sum, &m, &try_number_of_times
+                "dataset {}; try_number_of_times {}; 厳密解 {}",
+                tsp.data_name(),
+                &try_number_of_times,
+                strict_solution
             ))
             .fields(fields)
     });
