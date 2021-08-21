@@ -6,7 +6,7 @@ use std::{
 };
 
 use ndarray::{Array2, Array4};
-use num_traits::Pow;
+use num_traits::{Pow, ToPrimitive, Zero};
 use tokio::net::ToSocketAddrs;
 
 use crate::model::QuboModel;
@@ -36,11 +36,18 @@ impl TspNode {
 
         for line in lines {
             let line = line.map_err(|e| e.to_string())?;
-            let split = line.split_whitespace().collect::<Vec<&str>>();
+            let split = line.trim().split_whitespace().collect::<Vec<&str>>();
+            if split.len().is_zero() {
+                continue;
+            }
 
             match split[0] {
                 "COMMENT" => {
-                    self.opt_len = split.last().map(|s| s.parse().unwrap());
+                    self.opt_len = if let Ok(opt_len) = split.last().map(|s| s.parse()).unwrap() {
+                        Some(opt_len)
+                    } else {
+                        None
+                    }
                 }
                 n => {
                     if let Ok(n) = n.parse() {
@@ -78,7 +85,10 @@ impl TryFrom<&str> for TspNode {
 
         for line in lines {
             let line = line.map_err(|e| e.to_string())?;
-            let split = line.split_whitespace().collect::<Vec<&str>>();
+            let split = line.trim().split_whitespace().collect::<Vec<&str>>();
+            if split.len().is_zero() {
+                continue;
+            }
             match split[0] {
                 "NAME:" => {
                     data_name = split.last().map(|s| s.to_string());
@@ -120,22 +130,40 @@ impl TryFrom<&str> for TspNode {
 
 impl From<TspNode> for QuboModel {
     fn from(tsp: TspNode) -> Self {
-        let mut Q = Array4::<f64>::zeros((tsp.dim, tsp.dim, tsp.dim, tsp.dim));
-        let mut indices = Vec::new();
-        for i in 0..tsp.dim {
-            for j in 0..tsp.dim {
-                for u in 0..tsp.dim {
-                    for v in 0..tsp.dim {
-                        indices.push((i, j, u, v));
+        // let mut Q = Array4::<f32>::zeros((tsp.dim, tsp.dim, tsp.dim, tsp.dim));
+        let mut Q = Array2::zeros((tsp.dim.pow(2), tsp.dim.pow(2)));
+        for u in 0..tsp.dim {
+            for v in 0..tsp.dim {
+                for i in 0..tsp.dim {
+                    for j in 0..tsp.dim {
+                        let ui = u * tsp.dim + i;
+                        let vj = v * tsp.dim + j;
+                        let k = (ui as isize - vj as isize).abs() as usize;
+
+                        if ui > vj {
+                            continue;
+                        }
+                        if ui == vj {
+                            Q[[ui, vj]] -= 2.;
+                        }
+                        if u == v && i != j {
+                            Q[[ui, vj]] += 2.;
+                        }
+                        if u < v && i == j {
+                            Q[[ui, vj]] += 2.;
+                        }
+
+                        if (k == 1 || k == tsp.dim - 1) && u < v {
+                            for r in 0..(tsp.dim.pow(2)) {
+                                Q[[ui, vj]] += tsp.distance(u, v) as f32;
+                            }
+                        }
                     }
                 }
             }
         }
 
-        for (i, j, u, v) in indices {
-            Q[[i, j, u, v]] += tsp.distance(u, v);
-        }
-
-        QuboModel::new(Array2::zeros((0, 0)))
+        // let Q = Q.into_shape((tsp.dim.pow(2), tsp.dim.pow(2))).unwrap();
+        QuboModel::new(Q)
     }
 }
