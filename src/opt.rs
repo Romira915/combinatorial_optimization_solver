@@ -22,6 +22,8 @@ pub struct TspNode {
     node: Vec<(f64, f64)>,
     #[get = "pub"]
     opt: Option<Vec<usize>>,
+    #[get = "pub"]
+    bias: f32,
 }
 
 impl TspNode {
