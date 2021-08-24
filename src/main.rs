@@ -23,7 +23,8 @@ async fn main() {
 
     let mut rng = rand::rngs::StdRng::from_rng(rand::thread_rng()).unwrap();
 
-    let tsp = TspNode::try_from("./dataset/ulysses16.tsp").unwrap();
+    let mut tsp = TspNode::try_from("./dataset/ulysses16.tsp").unwrap();
+    tsp.set_bias(2.);
     let qubo = QuboModel::from(tsp.clone());
     let ising = IsingModel::from(qubo);
     let ising = Arc::new(ising);
@@ -69,7 +70,7 @@ async fn main() {
         )),
     ];
 
-    let mut scheduler = AnnealingScheduler::new(solvers, try_number_of_times);
+    let scheduler = AnnealingScheduler::new(solvers, try_number_of_times);
     let records = scheduler.run();
     let analysis_records = AnnealingScheduler::analysis(&records);
 
