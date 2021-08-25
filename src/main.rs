@@ -77,26 +77,10 @@ async fn main() {
     let embed = Embed::fake(move |e| {
         let mut fields = Vec::new();
         for ar in &analysis_records {
-            let (_crawl_order, best_len) = {
-                let mut crawl_order = Vec::new();
-                for (i, n) in ar.best_state.iter().enumerate() {
-                    if *n == 1 {
-                        crawl_order.push((i % tsp.dim(), i / tsp.dim()));
-                    }
-                }
-                crawl_order.sort();
-
-                let mut len = 0.;
-                for (i, node) in crawl_order.iter() {
-                    let next_index = crawl_order
-                        .iter()
-                        .find(|(index, _)| *index == (i + 1) % tsp.dim())
-                        .unwrap()
-                        .0;
-                    len += tsp.distance(*node, crawl_order[next_index].1);
-                }
-
-                (crawl_order, len)
+            let best_len = tsp.len_from_state(ar.best_state.view());
+            let best_len = match best_len {
+                Ok(len) => len.to_string(),
+                Err((len, message)) => format!("{} ({})", len, &message),
             };
             fields.push((
                 format!("{}\nparameter {}", ar.solver_name, ar.parameter),

@@ -6,7 +6,7 @@ use std::{
 };
 
 use getset::{Getters, Setters};
-use ndarray::{Array2, Array4};
+use ndarray::{Array1, Array2, Array4, ArrayView1};
 use num_traits::{Pow, ToPrimitive, Zero};
 use tokio::net::ToSocketAddrs;
 
@@ -80,6 +80,34 @@ impl TspNode {
         }
 
         Ok(())
+    }
+
+    pub fn len_from_state(&self, state: ArrayView1<i8>) -> Result<f64, (f64, String)> {
+        let mut traveling_order = Vec::new();
+        for (i, n) in state.iter().enumerate() {
+            if *n == 1 {
+                traveling_order.push((i % self.dim, i / self.dim));
+            }
+        }
+        traveling_order.sort();
+
+        let (len, _, _, satisfies_constraint) = traveling_order.iter().fold(
+            (0., 0usize, 0usize, true),
+            |(len, pre_order, pre_city_number, sc), (order, city_number)| {
+                (
+                    len + self.distance(pre_city_number, *city_number),
+                    *order,
+                    *city_number,
+                    pre_order + 1 == *order && sc,
+                )
+            },
+        );
+
+        if satisfies_constraint {
+            Ok(len)
+        } else {
+            Err((len, "制約条件エラー".to_string()))
+        }
     }
 }
 
