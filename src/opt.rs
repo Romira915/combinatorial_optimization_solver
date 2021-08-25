@@ -37,10 +37,14 @@ impl TspNode {
 
     pub fn opt_len(&self) -> Option<f64> {
         if let Some(opt) = &self.opt {
-            let mut len = 0.;
-            for (i, node) in opt.iter().enumerate() {
-                len += self.distance(node - 1, opt[(i + 1) % opt.len()]);
-            }
+            let (len, _) = opt
+                .iter()
+                .fold((0., opt[0]), |(len, pre_city_number), city_number| {
+                    (
+                        len + self.distance(pre_city_number - 1, city_number - 1),
+                        *city_number,
+                    )
+                });
 
             Some(len)
         } else {
@@ -86,13 +90,14 @@ impl TspNode {
         let mut traveling_order = Vec::new();
         for (i, n) in state.iter().enumerate() {
             if *n == 1 {
+                // (order, city_num)
                 traveling_order.push((i % self.dim, i / self.dim));
             }
         }
         traveling_order.sort();
 
         let (len, _, _, satisfies_constraint) = traveling_order.iter().fold(
-            (0., 0usize, 0usize, true),
+            (0., 0usize, traveling_order[0].1, true),
             |(len, pre_order, pre_city_number, sc), (order, city_number)| {
                 (
                     len + self.distance(pre_city_number, *city_number),
