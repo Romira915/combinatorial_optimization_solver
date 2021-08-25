@@ -39,7 +39,7 @@ impl TspNode {
         if let Some(opt) = &self.opt {
             let mut len = 0.;
             for (i, node) in opt.iter().enumerate() {
-                len += self.distance(*node, opt[(i + 1) % opt.len()]);
+                len += self.distance(node - 1, opt[(i + 1) % opt.len()]);
             }
 
             Some(len)
