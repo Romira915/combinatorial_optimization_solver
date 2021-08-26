@@ -15,6 +15,7 @@ use rand::distributions::Uniform;
 use rand::{Rng, SeedableRng};
 use serenity::model::channel::Embed;
 use std::convert::TryFrom;
+use tokio::time::Instant;
 
 #[tokio::main]
 async fn main() {
@@ -71,8 +72,12 @@ async fn main() {
     ];
 
     let scheduler = AnnealingScheduler::new(solvers, try_number_of_times);
+
+    let start = Instant::now();
     let records = scheduler.run();
     let analysis_records = AnnealingScheduler::analysis(&records);
+
+    let end = start.elapsed();
 
     let embed = Embed::fake(move |e| {
         let mut fields = Vec::new();
@@ -94,10 +99,11 @@ async fn main() {
         let strict_solution = tsp.opt_len().unwrap_or_default();
         e.title("Result")
             .description(format!(
-                "dataset {}; try_number_of_times {}; 厳密解 {}",
+                "dataset {}; try_number_of_times {}; 厳密解 {}; 実行時間 {:?}",
                 tsp.data_name(),
                 &try_number_of_times,
-                strict_solution
+                strict_solution,
+                end
             ))
             .fields(fields)
     });
