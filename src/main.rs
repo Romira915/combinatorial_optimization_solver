@@ -23,14 +23,14 @@ async fn main() {
 
     let mut rng = rand::rngs::StdRng::from_rng(rand::thread_rng()).unwrap();
 
-    let mut tsp = TspNode::try_from("./dataset/ulysses16.tsp").unwrap();
+    let mut tsp = TspNode::try_from("./dataset/kroA100.tsp").unwrap();
     tsp.set_bias(2.);
     let qubo = QuboModel::from(tsp.clone());
     let ising = IsingModel::from(qubo);
     let ising = Arc::new(ising);
 
-    let steps = 3e2 as usize;
-    let try_number_of_times = 1;
+    let steps = 3e5 as usize;
+    let try_number_of_times = 300;
     let range_param_start = 3.;
     let range_param_end = 1e-06;
     let solvers = vec![
