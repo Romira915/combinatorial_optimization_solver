@@ -7,7 +7,7 @@ use std::{
 
 use getset::{Getters, Setters};
 use ndarray::{Array1, Array2, Array4, ArrayView1};
-use num_traits::{Pow, ToPrimitive, Zero};
+use num_traits::{Float, Pow, ToPrimitive, Zero};
 use tokio::net::ToSocketAddrs;
 
 use crate::model::QuboModel;
@@ -25,6 +25,7 @@ pub struct TspNode {
     #[get = "pub"]
     #[set = "pub"]
     bias: f32,
+    max_dist: Option<f64>,
 }
 
 impl TspNode {
@@ -33,6 +34,23 @@ impl TspNode {
         let y_dist = (self.node[a].1 - self.node[b].1).abs();
 
         (x_dist + y_dist).sqrt()
+    }
+
+    pub fn max_distance(&mut self) -> f64 {
+        match self.max_dist {
+            Some(max) => max,
+            None => {
+                let mut max = 0.;
+                for a in 0..self.dim {
+                    for b in 0..self.dim {
+                        max = max.max(self.distance(a, b));
+                    }
+                }
+                self.max_dist = Some(max);
+
+                max
+            }
+        }
     }
 
     pub fn opt_len(&self) -> Option<f64> {
@@ -163,6 +181,7 @@ impl TryFrom<&str> for TspNode {
                     node,
                     opt: None,
                     bias: 1.,
+                    max_dist: None,
                 };
                 node.try_read_opt_file(opt_path.as_path())?;
                 Ok(node)
