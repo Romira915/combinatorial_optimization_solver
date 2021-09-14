@@ -121,7 +121,7 @@ impl TspNode {
                     len + self.distance(pre_city_number, *city_number),
                     *order,
                     *city_number,
-                    pre_order + 1 == *order && sc,
+                    (pre_order + 1 == *order && sc) || *order == 0,
                 )
             },
         );
