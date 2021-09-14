@@ -179,31 +179,25 @@ impl From<TspNode> for QuboModel {
     fn from(tsp: TspNode) -> Self {
         // let mut Q = Array4::<f32>::zeros((tsp.dim, tsp.dim, tsp.dim, tsp.dim));
         let mut Q = Array2::zeros((tsp.dim.pow(2), tsp.dim.pow(2)));
-        for u in 0..tsp.dim {
-            for v in 0..tsp.dim {
-                for i in 0..tsp.dim {
-                    for j in 0..tsp.dim {
-                        let ui = u * tsp.dim + i;
-                        let vj = v * tsp.dim + j;
-                        let k = (ui as isize - vj as isize).abs() as usize;
 
-                        if ui > vj {
-                            continue;
-                        }
-                        if ui == vj {
-                            Q[[ui, vj]] -= tsp.bias() * 2.;
-                        }
-                        if u == v && i != j {
-                            Q[[ui, vj]] += tsp.bias() * 2.;
-                        }
-                        if u < v && i == j {
-                            Q[[ui, vj]] += tsp.bias() * 2.;
+        for i in 0..tsp.dim {
+            for j in 0..tsp.dim {
+                for a in 0..tsp.dim {
+                    for b in 0..tsp.dim {
+                        let ia = i + tsp.dim * a;
+                        let jb = j + tsp.dim * b;
+                        if i == j {
+                            Q[[i + tsp.dim * a, ((i + 1) % tsp.dim) + tsp.dim * b]] +=
+                                tsp.distance(a, b) as f32;
+                            Q[[ia, jb]] += tsp.bias;
                         }
 
-                        if (k == 1 || k == tsp.dim - 1) && u < v {
-                            for r in 0..(tsp.dim.pow(2)) {
-                                Q[[ui, vj]] += tsp.distance(u, v) as f32;
-                            }
+                        if i == j && a == b {
+                            Q[[ia, jb]] += -2. * 2. * tsp.bias;
+                        }
+
+                        if a == b {
+                            Q[[ia, jb]] += tsp.bias;
                         }
                     }
                 }
