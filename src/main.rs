@@ -26,7 +26,8 @@ async fn main() {
 
     let mut tsp = TspNode::try_from("./dataset/kroA100.tsp").unwrap();
     let max_dist = tsp.max_distance() as f32;
-    tsp.set_bias(max_dist * 1.0);
+    let bias = 1.5;
+    tsp.set_bias(max_dist * bias);
     let qubo = QuboModel::from(tsp.clone());
     let ising = IsingModel::from(qubo);
     let ising = Arc::new(ising);
@@ -100,10 +101,12 @@ async fn main() {
         let strict_solution = tsp.opt_len().unwrap_or_default();
         e.title("Result")
             .description(format!(
-                "dataset {}; try_number_of_times {}; 厳密解 {}; 実行時間 {:?}",
+                "dataset {}; try_number_of_times {}; 厳密解 {}; bias {} * {}; 実行時間 {:?}",
                 tsp.data_name(),
                 &try_number_of_times,
                 strict_solution,
+                max_dist,
+                bias,
                 end
             ))
             .fields(fields)
