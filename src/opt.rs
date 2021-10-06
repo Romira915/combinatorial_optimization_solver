@@ -30,8 +30,8 @@ pub struct TspNode {
 
 impl TspNode {
     pub fn distance(&self, a: usize, b: usize) -> f64 {
-        let x_dist = (self.node[a].0 - self.node[b].0).abs();
-        let y_dist = (self.node[a].1 - self.node[b].1).abs();
+        let x_dist = (self.node[a].0 - self.node[b].0).powf(2.);
+        let y_dist = (self.node[a].1 - self.node[b].1).powf(2.);
 
         (x_dist + y_dist).sqrt()
     }
