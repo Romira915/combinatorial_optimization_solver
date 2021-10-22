@@ -144,12 +144,13 @@ async fn main() {
                     ar.average_energy,
                     ar.worst_energy,
                     ar.best_state,
-                    numbers.dot(
+                    (numbers.dot(
                         &ar.best_state
                             .iter()
                             .map(|s| *s as f64)
                             .collect::<Array1<f64>>()
-                    )
+                    ) - &m)
+                        .abs()
                 ),
                 false,
             ));
