@@ -24,7 +24,7 @@ async fn main() {
 
     let mut rng = rand::rngs::StdRng::from_rng(rand::thread_rng()).unwrap();
 
-    let mut tsp = TspNode::try_from("./dataset/ch130.tsp").unwrap();
+    let mut tsp = TspNode::try_from("./dataset/bayg29.tsp").unwrap();
     let max_dist = tsp.max_distance() as f32;
     let bias = 1.5;
     tsp.set_bias(max_dist * bias);
