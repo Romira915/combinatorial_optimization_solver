@@ -33,7 +33,9 @@ async fn main() {
         let mut J = Array2::zeros((n, n));
         for i in 0..n {
             for j in 0..n {
-                J[[i, j]] = (numbers[i] * numbers[j]) as f32;
+                if i < j {
+                    J[[i, j]] = (numbers[i] * numbers[j]) as f32;
+                }
             }
         }
         J /= 2.;
