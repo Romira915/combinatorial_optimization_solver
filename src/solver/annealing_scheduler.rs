@@ -91,6 +91,7 @@ impl AnnealingScheduler {
                 worst_energy,
                 best_state,
                 parameter: record[0].parameter.clone(),
+                states: record.to_vec(),
             });
         }
 

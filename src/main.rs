@@ -9,7 +9,7 @@ use combinatorial_optimization_solver::solver::simulated_annealing::SimulatedAnn
 use combinatorial_optimization_solver::solver::simulated_quantum_annealing::SimulatedQuantumAnnealing;
 use combinatorial_optimization_solver::solver::{Solver, SolverVariant};
 use combinatorial_optimization_solver::webhook::Webhook;
-use ndarray::{array, Array1, Array2};
+use ndarray::{array, Array1, Array2, ArrayView};
 use ndarray_linalg::Scalar;
 use rand::distributions::Uniform;
 use rand::{Rng, SeedableRng};
@@ -89,11 +89,32 @@ async fn main() {
                 Ok(len) => len.to_string(),
                 Err((len, message)) => format!("{} ({})", len, &message),
             };
+            let len_vec = {
+                let mut vec = Vec::new();
+                for state in &ar.states {
+                    let len = match tsp.len_from_state(state.bits.view()) {
+                        Ok(len) => len.to_string(),
+                        Err((len, message)) => format!("{} ({})", len, &message),
+                    };
+                    vec.push(len);
+                }
+                let mut str = "[".to_string();
+                for len in vec {
+                    str.push_str(&format!("{}, ", &len));
+                }
+                str.push_str("]");
+                str
+            };
             fields.push((
                 format!("{}\nparameter {}", ar.solver_name, ar.parameter),
                 format!(
-                    "[best {}; ave {}; worst {}; best_len {}]\nbits {}",
-                    ar.best_energy, ar.average_energy, ar.worst_energy, best_len, ar.best_state
+                    "[best {}; ave {}; worst {}; best_len {}]\nbits {}\nlen {:?}",
+                    ar.best_energy,
+                    ar.average_energy,
+                    ar.worst_energy,
+                    best_len,
+                    ar.best_state,
+                    len_vec
                 ),
                 false,
             ));
