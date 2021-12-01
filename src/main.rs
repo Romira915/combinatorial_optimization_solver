@@ -113,7 +113,8 @@ async fn main() {
                     ar.average_energy,
                     ar.worst_energy,
                     best_len,
-                    ar.best_state,
+                    // ar.best_state,
+                    "廃止",
                     len_vec
                 ),
                 false,
