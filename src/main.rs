@@ -26,8 +26,9 @@ async fn main() {
 
     let mut tsp = TspNode::try_from("./dataset/ulysses16.tsp").unwrap();
     let max_dist = tsp.max_distance() as f32;
-    let bias = 0.3;
-    tsp.set_bias(max_dist * bias);
+    let bias = 0.15;
+    // tsp.set_bias(max_dist * bias);
+    tsp.set_bias(5.);
     let qubo = QuboModel::from(tsp.clone());
     let ising = IsingModel::from(qubo);
     let ising = Arc::new(ising);
