@@ -52,7 +52,7 @@ async fn main() {
     let ising = Arc::new(IsingModel::new(J, h));
 
     let steps = 3e5 as usize;
-    let try_number_of_times = 300;
+    let try_number_of_times = 30;
     let range_param_start = 3.;
     let range_param_end = 1e-06;
     let solvers = vec![
@@ -87,6 +87,42 @@ async fn main() {
             0.0125,
             steps,
             80,
+            Arc::clone(&ising),
+            None,
+        )),
+        SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
+            range_param_start,
+            range_param_end,
+            0.00625,
+            steps,
+            160,
+            Arc::clone(&ising),
+            None,
+        )),
+        SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
+            range_param_start,
+            range_param_end,
+            1. / 320.,
+            steps,
+            320,
+            Arc::clone(&ising),
+            None,
+        )),
+        SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
+            range_param_start,
+            range_param_end,
+            1. / 640.,
+            steps,
+            640,
+            Arc::clone(&ising),
+            None,
+        )),
+        SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
+            range_param_start,
+            range_param_end,
+            1. / 1280.,
+            steps,
+            1280,
             Arc::clone(&ising),
             None,
         )),
