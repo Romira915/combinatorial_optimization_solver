@@ -33,7 +33,9 @@ async fn main() {
         let mut J = Array2::zeros((n, n));
         for i in 0..n {
             for j in 0..n {
-                J[[i, j]] = (numbers[i] * numbers[j]) as f32;
+                if i < j {
+                    J[[i, j]] = (numbers[i] * numbers[j]) as f32;
+                }
             }
         }
         J /= 2.;
@@ -132,14 +134,25 @@ async fn main() {
     let records = scheduler.run();
     let analysis_records = AnnealingScheduler::analysis(&records);
 
+    let numbers = Array1::from_vec(numbers);
     let embed = Embed::fake(move |e| {
         let mut fields = Vec::new();
         for ar in &analysis_records {
             fields.push((
                 format!("{}\nparameter {}", ar.solver_name, ar.parameter),
                 format!(
-                    "[best {}; ave {}; worst {};]\nbits {}",
-                    ar.best_energy, ar.average_energy, ar.worst_energy, ar.best_state
+                    "[best {}; ave {}; worst {};]\nbits {}\ncost {};",
+                    ar.best_energy,
+                    ar.average_energy,
+                    ar.worst_energy,
+                    ar.best_state,
+                    (numbers.dot(
+                        &ar.best_state
+                            .iter()
+                            .map(|s| *s as f64)
+                            .collect::<Array1<f64>>()
+                    ) - &m)
+                        .abs()
                 ),
                 false,
             ));
