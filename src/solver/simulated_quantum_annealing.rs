@@ -1,4 +1,5 @@
 use ndarray::{Array, Array1, Array2};
+use num_traits::Float;
 use rand::{prelude::StdRng, Rng, SeedableRng};
 use std::{f64::consts, sync::Arc};
 
@@ -71,36 +72,45 @@ impl Solver for SimulatedQuantumAnnealing {
         for G in &G_array {
             // local flip
             for k in 0..self.P {
-                let flip_local_index = self.rng.gen_range(0..self.N);
-                let J_p = -self.PT
-                    * (G / self.PT).tanh().log(consts::E)
-                    * (self.spins[[k, flip_local_index]]
-                        * (self.spins[[(k + self.P - 1) % self.P, flip_local_index]]
-                            + self.spins[[(k + 1) % self.P, flip_local_index]]))
-                        as f64;
-                let delta_E = self.model.calculate_dE(self.spins.row(k), flip_local_index) as f64;
-                let p = f64::min(1., ((-delta_E + J_p) / self.PT).exp());
-                if solver::probability_boolean(p, &mut self.rng) {
-                    IsingModel::accept_flip(self.spins.row_mut(k), flip_local_index);
+                for _ in 0..self.N {
+                    let flip_local_index = self.rng.gen_range(0..self.N);
+                    // let J_p = -self.PT
+                    //     * (G / self.PT).tanh().log(consts::E)
+                    //     * (self.spins[[k, flip_local_index]]
+                    //         * (self.spins[[(k + self.P - 1) % self.P, flip_local_index]]
+                    //             + self.spins[[(k + 1) % self.P, flip_local_index]]))
+                    //         as f64;
+                    let delta_trotter = -self.T / 2.0
+                        * (1.0 / (G / self.PT).tanh()).log(consts::E)
+                        * (self.spins[[k, flip_local_index]]
+                            * (self.spins[[(k + self.P - 1) % self.P, flip_local_index]]
+                                + self.spins[[(k + 1) % self.P, flip_local_index]]))
+                            as f64;
+                    let delta_E =
+                        self.model.calculate_dE(self.spins.row(k), flip_local_index) as f64;
+                    let p = f64::min(1., ((-delta_E + delta_trotter) / self.T).exp());
+                    if solver::probability_boolean(p, &mut self.rng) {
+                        IsingModel::accept_flip(self.spins.row_mut(k), flip_local_index);
+                    }
                 }
             }
 
             // global flip
-            let flip_global_index = self.rng.gen_range(0..self.N);
-            let delta_E = {
-                let mut d = 0.;
-                for k in 0..self.P {
-                    d += self
-                        .model
-                        .calculate_dE(self.spins.row(k), flip_global_index)
-                        as f64;
-                }
-                d
-            };
-            let p = f64::min(1., (-delta_E / self.PT).exp());
-            if solver::probability_boolean(p, &mut self.rng) {
-                IsingModel::accept_global_flip(self.spins.view_mut(), flip_global_index);
-            }
+            // let flip_global_index = self.rng.gen_range(0..self.N);
+            // let delta_E = {
+            //     let mut d = 0.;
+            //     for k in 0..self.P {
+            //         d += self
+            //             .model
+            //             .calculate_dE(self.spins.row(k), flip_global_index)
+            //             as f64;
+            //     }
+            //     d
+            // };
+            // let p = f64::min(1., (-delta_E / self.PT).exp());
+            // if solver::probability_boolean(p, &mut self.rng) {
+            //     IsingModel::accept_global_flip(self.spins.view_mut(), flip_global_index);
+            // }
         }
 
         let energy_list = self.energy_list();
