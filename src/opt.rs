@@ -5,27 +5,69 @@ use std::{
     path::Path,
 };
 
-use ndarray::{Array2, Array4};
-use num_traits::{Pow, ToPrimitive, Zero};
+use getset::{Getters, Setters};
+use ndarray::{Array1, Array2, Array4, ArrayView1};
+use num_traits::{Float, Pow, ToPrimitive, Zero};
 use tokio::net::ToSocketAddrs;
 
 use crate::model::QuboModel;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Getters, Setters)]
 pub struct TspNode {
+    #[get = "pub"]
     data_name: String,
+    #[get = "pub"]
     dim: usize,
+    #[get = "pub"]
     node: Vec<(f64, f64)>,
+    #[get = "pub"]
     opt: Option<Vec<usize>>,
-    opt_len: Option<usize>,
+    #[get = "pub"]
+    #[set = "pub"]
+    bias: f32,
+    max_dist: Option<f64>,
 }
 
 impl TspNode {
-    fn distance(&self, a: usize, b: usize) -> f64 {
-        let x_dist = (self.node[a].0 - self.node[b].0).abs();
-        let y_dist = (self.node[a].1 - self.node[b].1).abs();
+    pub fn distance(&self, a: usize, b: usize) -> f64 {
+        let x_dist = (self.node[a].0 - self.node[b].0).powf(2.);
+        let y_dist = (self.node[a].1 - self.node[b].1).powf(2.);
 
         (x_dist + y_dist).sqrt()
+    }
+
+    pub fn max_distance(&mut self) -> f64 {
+        match self.max_dist {
+            Some(max) => max,
+            None => {
+                let mut max = 0.;
+                for a in 0..self.dim {
+                    for b in 0..self.dim {
+                        max = max.max(self.distance(a, b));
+                    }
+                }
+                self.max_dist = Some(max);
+
+                max
+            }
+        }
+    }
+
+    pub fn opt_len(&self) -> Option<f64> {
+        if let Some(opt) = &self.opt {
+            let (len, _) = opt
+                .iter()
+                .fold((0., opt[0]), |(len, pre_city_number), city_number| {
+                    (
+                        len + self.distance(pre_city_number - 1, city_number - 1),
+                        *city_number,
+                    )
+                });
+
+            Some(len)
+        } else {
+            None
+        }
     }
 
     fn try_read_opt_file(&mut self, path: &Path) -> Result<(), String> {
@@ -42,13 +84,7 @@ impl TspNode {
             }
 
             match split[0] {
-                "COMMENT" => {
-                    self.opt_len = if let Ok(opt_len) = split.last().map(|s| s.parse()).unwrap() {
-                        Some(opt_len)
-                    } else {
-                        None
-                    }
-                }
+                "COMMENT" => {}
                 n => {
                     if let Ok(n) = n.parse() {
                         if n as isize != -1 {
@@ -66,6 +102,35 @@ impl TspNode {
         }
 
         Ok(())
+    }
+
+    pub fn len_from_state(&self, state: ArrayView1<i8>) -> Result<f64, (f64, String)> {
+        let mut traveling_order = Vec::new();
+        for (i, n) in state.iter().enumerate() {
+            if *n == 1 {
+                // (order, city_num)
+                traveling_order.push((i % self.dim, i / self.dim));
+            }
+        }
+        traveling_order.sort();
+
+        let (len, _, _, satisfies_constraint) = traveling_order.iter().fold(
+            (0., 0usize, traveling_order[0].1, true),
+            |(len, pre_order, pre_city_number, sc), (order, city_number)| {
+                (
+                    len + self.distance(pre_city_number, *city_number),
+                    *order,
+                    *city_number,
+                    (pre_order + 1 == *order && sc) || *order == 0,
+                )
+            },
+        );
+
+        if satisfies_constraint {
+            Ok(len)
+        } else {
+            Err((len, "制約条件エラー".to_string()))
+        }
     }
 }
 
@@ -115,7 +180,8 @@ impl TryFrom<&str> for TspNode {
                     dim,
                     node,
                     opt: None,
-                    opt_len: None,
+                    bias: 1.,
+                    max_dist: None,
                 };
                 node.try_read_opt_file(opt_path.as_path())?;
                 Ok(node)
@@ -132,31 +198,25 @@ impl From<TspNode> for QuboModel {
     fn from(tsp: TspNode) -> Self {
         // let mut Q = Array4::<f32>::zeros((tsp.dim, tsp.dim, tsp.dim, tsp.dim));
         let mut Q = Array2::zeros((tsp.dim.pow(2), tsp.dim.pow(2)));
-        for u in 0..tsp.dim {
-            for v in 0..tsp.dim {
-                for i in 0..tsp.dim {
-                    for j in 0..tsp.dim {
-                        let ui = u * tsp.dim + i;
-                        let vj = v * tsp.dim + j;
-                        let k = (ui as isize - vj as isize).abs() as usize;
 
-                        if ui > vj {
-                            continue;
-                        }
-                        if ui == vj {
-                            Q[[ui, vj]] -= 2.;
-                        }
-                        if u == v && i != j {
-                            Q[[ui, vj]] += 2.;
-                        }
-                        if u < v && i == j {
-                            Q[[ui, vj]] += 2.;
+        for i in 0..tsp.dim {
+            for j in 0..tsp.dim {
+                for a in 0..tsp.dim {
+                    for b in 0..tsp.dim {
+                        let ia = i + tsp.dim * a;
+                        let jb = j + tsp.dim * b;
+                        if i == j {
+                            Q[[i + tsp.dim * a, ((i + 1) % tsp.dim) + tsp.dim * b]] +=
+                                tsp.distance(a, b) as f32;
+                            Q[[ia, jb]] += tsp.bias;
                         }
 
-                        if (k == 1 || k == tsp.dim - 1) && u < v {
-                            for r in 0..(tsp.dim.pow(2)) {
-                                Q[[ui, vj]] += tsp.distance(u, v) as f32;
-                            }
+                        if i == j && a == b {
+                            Q[[ia, jb]] += -2. * 2. * tsp.bias;
+                        }
+
+                        if a == b {
+                            Q[[ia, jb]] += tsp.bias;
                         }
                     }
                 }

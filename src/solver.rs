@@ -34,6 +34,7 @@ pub struct StatisticsRecord {
     pub worst_energy: f64,
     pub best_state: Array1<i8>,
     pub parameter: String,
+    pub states: Vec<SolutionRecord>,
 }
 
 #[derive(Debug, Clone)]
