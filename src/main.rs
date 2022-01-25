@@ -56,7 +56,7 @@ fn tsp_ising(rng: &mut StdRng) -> (TspNode, Arc<IsingModel>, f32, f64) {
     let max_dist = tsp.max_distance() as f32;
     let bias = 0.15;
     // tsp.set_bias(max_dist * bias);
-    tsp.set_bias(5.);
+    tsp.set_bias(6.);
     let qubo = QuboModel::from(tsp.clone());
     let ising = IsingModel::from(qubo);
     let ising = Arc::new(ising);
@@ -73,7 +73,7 @@ async fn main() {
 
     let (tsp, ising, max_dist, bias) = tsp_ising(&mut rng);
 
-    let steps = 3e6 as usize;
+    let steps = 1e5 as usize;
     let try_number_of_times = 10;
     let range_param_start = 3.;
     let range_param_end = 1e-06;
