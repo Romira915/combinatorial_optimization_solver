@@ -9,7 +9,7 @@ use combinatorial_optimization_solver::solver::simulated_annealing::SimulatedAnn
 use combinatorial_optimization_solver::solver::simulated_quantum_annealing::SimulatedQuantumAnnealing;
 use combinatorial_optimization_solver::solver::{Solver, SolverVariant};
 use combinatorial_optimization_solver::webhook::Webhook;
-use ndarray::{array, Array1, Array2, ArrayView};
+use ndarray::{array, Array1, Array2, ArrayBase, ArrayView, ArrayView1, Dim, OwnedRepr};
 use ndarray_linalg::Scalar;
 use rand::distributions::Uniform;
 use rand::prelude::StdRng;
@@ -121,6 +121,15 @@ async fn main() {
             Arc::clone(&ising),
             None,
         )),
+        SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
+            range_param_start,
+            range_param_end,
+            1. / 5.,
+            steps,
+            320,
+            Arc::clone(&ising),
+            None,
+        )),
     ];
 
     let scheduler = AnnealingScheduler::new(solvers, try_number_of_times);
@@ -134,16 +143,25 @@ async fn main() {
     let embed = Embed::fake(move |e| {
         let mut fields = Vec::new();
         for ar in &analysis_records {
-            let best_len = tsp.len_from_state(ar.best_state.view());
-            let best_len = match best_len {
-                Ok(len) => len.to_string(),
-                Err((len, message)) => format!("{} ({})", len, &message),
-            };
+            // let best_len = tsp.len_from_state(ar.best_state.view());
+            // let best_len = match best_len {
+            //     Ok(len) => len.to_string(),
+            //     Err((len, message)) => format!("{} ({})", len, &message),
+            // };
+            let mut best_len = f64::MAX;
+            let mut best_state = ar.states[0].bits.view();
             let len_vec = {
                 let mut vec = Vec::new();
                 for state in &ar.states {
                     let len = match tsp.len_from_state(state.bits.view()) {
-                        Ok(len) => len.to_string(),
+                        Ok(len) => {
+                            if len < best_len {
+                                best_len = len;
+                                best_state = state.bits.view();
+                            }
+
+                            len.to_string()
+                        }
                         Err((_len, message)) => format!("{}", &message),
                     };
                     vec.push(len);
@@ -155,6 +173,8 @@ async fn main() {
                 str.push_str("]");
                 str
             };
+            let dim = tsp.dim().to_owned();
+            println!("spins\n{}\n", &best_state.to_shape((dim, dim)).unwrap());
             fields.push((
                 format!("{}\nparameter {}", ar.solver_name, ar.parameter),
                 format!(
@@ -163,8 +183,8 @@ async fn main() {
                     ar.average_energy,
                     ar.worst_energy,
                     best_len,
-                    // ar.best_state,
-                    "廃止",
+                    best_state,
+                    // "廃止",
                     len_vec
                 ),
                 false,
