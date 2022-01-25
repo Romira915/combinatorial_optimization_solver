@@ -14,6 +14,7 @@ use self::{
 
 pub trait Solver {
     fn solve(&mut self) -> SolutionRecord;
+    // fn solver_with_filter(&mut self) -> SolutionRecord;
     fn record(&self) -> Option<SolutionRecord>;
     fn clone_solver(&self) -> Self;
 }

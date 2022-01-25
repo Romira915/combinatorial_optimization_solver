@@ -73,7 +73,7 @@ async fn main() {
 
     let (tsp, ising, max_dist, bias) = tsp_ising(&mut rng);
 
-    let steps = 1e6 as usize;
+    let steps = 1e4 as usize;
     let try_number_of_times = 10;
     let range_param_start = 1.;
     let range_param_end = 1e-06;
