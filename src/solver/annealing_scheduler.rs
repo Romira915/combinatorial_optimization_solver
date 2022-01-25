@@ -1,10 +1,13 @@
 use rayon::{prelude::*, ThreadPool, ThreadPoolBuilder};
 use std::{rc::Rc, sync::mpsc};
 
-use crate::solver::{
-    simulated_annealing::SimulatedAnnealing,
-    simulated_quantum_annealing::SimulatedQuantumAnnealing, SolutionRecord, Solver, SolverVariant,
-    StatisticsRecord,
+use crate::{
+    opt::TspNode,
+    solver::{
+        simulated_annealing::SimulatedAnnealing,
+        simulated_quantum_annealing::SimulatedQuantumAnnealing, SolutionRecord, Solver,
+        SolverVariant, StatisticsRecord,
+    },
 };
 
 pub struct AnnealingScheduler {
@@ -36,6 +39,31 @@ impl AnnealingScheduler {
             let record: Vec<SolutionRecord> = solver_parallel
                 .par_iter_mut()
                 .map(|s| s.solve())
+                .inspect(|s| println!("{}\n", &s))
+                .collect();
+
+            records.push(record);
+        }
+
+        records
+    }
+
+    pub fn run_tsp(&self, node: &TspNode) -> Vec<Vec<SolutionRecord>> {
+        let cpus = num_cpus::get();
+        ThreadPoolBuilder::new()
+            .num_threads(cpus)
+            .build_global()
+            .unwrap();
+
+        let mut records: Vec<Vec<SolutionRecord>> = Vec::new();
+
+        for solver in &self.solvers {
+            let mut solver_parallel = Vec::new();
+            solver_parallel.resize_with(self.try_number_of_times, || solver.clone());
+
+            let record: Vec<SolutionRecord> = solver_parallel
+                .par_iter_mut()
+                .map(|s| s.solver_with_filter(node))
                 .inspect(|s| println!("{}\n", &s))
                 .collect();
 

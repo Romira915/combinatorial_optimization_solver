@@ -162,6 +162,77 @@ impl Solver for SimulatedQuantumAnnealing {
 
         obj
     }
+
+    fn solver_with_filter(&mut self, filter: &crate::opt::TspNode) -> SolutionRecord {
+        let G_array = Array::linspace(self.G0, self.Gf, self.steps);
+
+        for G in &G_array {
+            // local flip
+            for k in 0..self.P {
+                for _ in 0..self.N {
+                    let flip_local_index = self.rng.gen_range(0..self.N);
+                    let k = self.rng.gen_range(0..self.P);
+
+                    let B = self.T * (1.0 / (G / self.PT).tanh()).log(consts::E);
+                    let delta_trotter = B
+                        * (self.spins[[k, flip_local_index]]
+                            * (self.spins[[(k + self.P - 1) % self.P, flip_local_index]]
+                                + self.spins[[(k + 1) % self.P, flip_local_index]]))
+                            as f64;
+                    let delta_E =
+                        self.model.calculate_dE(self.spins.row(k), flip_local_index) as f64;
+                    let p = f64::min(1., (-(delta_E + delta_trotter) / self.T).exp());
+                    if solver::probability_boolean(p, &mut self.rng) {
+                        IsingModel::accept_flip(self.spins.row_mut(k), flip_local_index);
+                    }
+                }
+            }
+        }
+
+        let energy_list = self.energy_list();
+        let (min_index, min_energy) =
+            energy_list
+                .iter()
+                .enumerate()
+                .fold((0, f64::NAN), |acc, v| {
+                    let v = (v.0, v.1.to_owned());
+                    if acc.1 == f64::NAN {
+                        return v;
+                    }
+                    if acc.1 < v.1 {
+                        match (
+                            filter.len_from_state(self.spins.row(acc.0).view()),
+                            filter.len_from_state(self.spins.row(v.0).view()),
+                        ) {
+                            (Ok(_), _) => acc,
+                            (_, Ok(_)) => v,
+                            _ => acc,
+                        }
+                    } else {
+                        match (
+                            filter.len_from_state(self.spins.row(acc.0).view()),
+                            filter.len_from_state(self.spins.row(v.0).view()),
+                        ) {
+                            (Ok(_), _) => acc,
+                            (_, Ok(_)) => v,
+                            _ => v,
+                        }
+                    }
+                });
+
+        let record = SolutionRecord {
+            solver_name: "Simulated Quantum Annealing".to_string(),
+            bits: self.spins.row(min_index).map(QuboModel::BITS_FROM_SPINS),
+            energy: min_energy,
+            parameter: format!(
+                "[G0 {}; Gf {}; steps {}; T {}; P {}; PT {};]",
+                self.G0, self.Gf, self.steps, self.T, self.P, self.PT
+            ),
+        };
+        self.record = Some(record.clone());
+
+        record
+    }
 }
 
 impl Clone for SimulatedQuantumAnnealing {

@@ -73,8 +73,8 @@ async fn main() {
 
     let (tsp, ising, max_dist, bias) = tsp_ising(&mut rng);
 
-    let steps = 1e4 as usize;
-    let try_number_of_times = 10;
+    let steps = 1e5 as usize;
+    let try_number_of_times = 30;
     let range_param_start = 1.;
     let range_param_end = 1e-06;
     let solvers = vec![
@@ -126,7 +126,7 @@ async fn main() {
     let scheduler = AnnealingScheduler::new(solvers, try_number_of_times);
 
     let start = Instant::now();
-    let records = scheduler.run();
+    let records = scheduler.run_tsp(&tsp);
     let analysis_records = AnnealingScheduler::analysis(&records);
 
     let end = start.elapsed();
