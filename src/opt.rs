@@ -29,6 +29,17 @@ pub struct TspNode {
 }
 
 impl TspNode {
+    pub fn new(data_name: String, node: Vec<(f64, f64)>) -> Self {
+        TspNode {
+            data_name,
+            dim: node.len(),
+            node,
+            opt: None,
+            bias: 1.0,
+            max_dist: None,
+        }
+    }
+
     pub fn distance(&self, a: usize, b: usize) -> f64 {
         let x_dist = (self.node[a].0 - self.node[b].0).powf(2.);
         let y_dist = (self.node[a].1 - self.node[b].1).powf(2.);

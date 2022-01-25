@@ -2,7 +2,7 @@ pub mod annealing_scheduler;
 pub mod simulated_annealing;
 pub mod simulated_quantum_annealing;
 
-use std::fmt::Display;
+use std::{fmt::Display, usize};
 
 use ndarray::{Array1, Array2};
 use ndarray_rand::rand_distr::WeightedAliasIndex;
@@ -45,10 +45,15 @@ pub enum SolverVariant {
 
 impl Display for SolutionRecord {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let dim = self.bits.dim() as f64;
+        let dim = f64::sqrt(dim) as usize;
         write!(
             f,
-            "spins {}; energy {};\nparameter {}",
-            self.bits, self.energy, self.parameter
+            "spins\n {}; energy {}; flags {}\nparameter {}",
+            self.bits.to_shape((dim, dim)).unwrap(),
+            self.energy,
+            self.bits.sum(),
+            self.parameter
         )
     }
 }

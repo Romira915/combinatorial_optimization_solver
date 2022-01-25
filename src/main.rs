@@ -51,12 +51,12 @@ fn number_partitioning(rng: &mut StdRng) -> Arc<IsingModel> {
     ising
 }
 
-fn tsp_ising(rng: &mut StdRng) -> (TspNode, Arc<IsingModel>, f32, f64) {
+fn tsp_ising(rng: &mut StdRng) -> (TspNode, Arc<IsingModel>, f32, f32) {
     let mut tsp = TspNode::try_from("./dataset/ulysses16.tsp").unwrap();
     let max_dist = tsp.max_distance() as f32;
-    let bias = 0.15;
-    // tsp.set_bias(max_dist * bias);
-    tsp.set_bias(6.);
+    let bias = 0.55;
+    tsp.set_bias(max_dist * bias);
+    // tsp.set_bias(15.);
     let qubo = QuboModel::from(tsp.clone());
     let ising = IsingModel::from(qubo);
     let ising = Arc::new(ising);
@@ -73,9 +73,9 @@ async fn main() {
 
     let (tsp, ising, max_dist, bias) = tsp_ising(&mut rng);
 
-    let steps = 1e5 as usize;
+    let steps = 1e6 as usize;
     let try_number_of_times = 10;
-    let range_param_start = 3.;
+    let range_param_start = 1.;
     let range_param_end = 1e-06;
     let solvers = vec![
         SolverVariant::Sa(SimulatedAnnealing::new(
@@ -88,7 +88,7 @@ async fn main() {
         SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
             range_param_start,
             range_param_end,
-            1.,
+            1. / 5.,
             steps,
             1,
             Arc::clone(&ising),
@@ -97,7 +97,7 @@ async fn main() {
         SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
             range_param_start,
             range_param_end,
-            0.025,
+            1. / 5.,
             steps,
             40,
             Arc::clone(&ising),
@@ -106,7 +106,7 @@ async fn main() {
         SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
             range_param_start,
             range_param_end,
-            0.0125,
+            1. / 5.,
             steps,
             80,
             Arc::clone(&ising),
@@ -115,36 +115,9 @@ async fn main() {
         SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
             range_param_start,
             range_param_end,
-            0.00625,
+            1. / 5.,
             steps,
             160,
-            Arc::clone(&ising),
-            None,
-        )),
-        SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
-            range_param_start,
-            range_param_end,
-            1. / 320.,
-            steps,
-            320,
-            Arc::clone(&ising),
-            None,
-        )),
-        SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
-            range_param_start,
-            range_param_end,
-            1. / 640.,
-            steps,
-            640,
-            Arc::clone(&ising),
-            None,
-        )),
-        SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
-            range_param_start,
-            range_param_end,
-            1. / 1280.,
-            steps,
-            1280,
             Arc::clone(&ising),
             None,
         )),
@@ -171,7 +144,7 @@ async fn main() {
                 for state in &ar.states {
                     let len = match tsp.len_from_state(state.bits.view()) {
                         Ok(len) => len.to_string(),
-                        Err((len, message)) => format!("{} ({})", len, &message),
+                        Err((_len, message)) => format!("{}", &message),
                     };
                     vec.push(len);
                 }
