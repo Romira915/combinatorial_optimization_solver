@@ -162,7 +162,7 @@ async fn main() {
 
                             len.to_string()
                         }
-                        Err((_len, message)) => format!("{}", &message),
+                        Err(message) => format!("{}", &message),
                     };
                     vec.push(len);
                 }
@@ -174,12 +174,10 @@ async fn main() {
                 str
             };
             let dim = tsp.dim().to_owned();
-            println!("{}", ar.solver_name);
-            println!("spins\n{}\n", &best_state.to_shape((dim, dim)).unwrap());
             fields.push((
                 format!("{}\nparameter {}", ar.solver_name, ar.parameter),
                 format!(
-                    "[best {}; ave {}; worst {}; best_len {}]\nbits {}\nlen {:?}",
+                    "[best {}; ave {}; worst {}; best_len {: >6}]\nbits {}\nlen {:?}",
                     ar.best_energy,
                     ar.average_energy,
                     ar.worst_energy,
@@ -190,6 +188,8 @@ async fn main() {
                 ),
                 false,
             ));
+            println!("{:?}", &fields);
+            println!("spins\n{}\n", &best_state.to_shape((dim, dim)).unwrap());
         }
         let strict_solution = tsp.opt_len().unwrap_or_default();
         e.title("Result")
