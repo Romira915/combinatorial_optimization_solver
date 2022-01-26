@@ -174,6 +174,7 @@ async fn main() {
                 str
             };
             let dim = tsp.dim().to_owned();
+            println!("{}", ar.solver_name);
             println!("spins\n{}\n", &best_state.to_shape((dim, dim)).unwrap());
             fields.push((
                 format!("{}\nparameter {}", ar.solver_name, ar.parameter),
