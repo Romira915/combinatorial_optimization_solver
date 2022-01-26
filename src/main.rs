@@ -54,7 +54,7 @@ fn number_partitioning(rng: &mut StdRng) -> Arc<IsingModel> {
 fn tsp_ising(rng: &mut StdRng) -> (TspNode, Arc<IsingModel>, f32, f32) {
     let mut tsp = TspNode::try_from("./dataset/ulysses16.tsp").unwrap();
     let max_dist = tsp.max_distance() as f32;
-    let bias = 0.55;
+    let bias = 0.6;
     tsp.set_bias(max_dist * bias);
     // tsp.set_bias(15.);
     let qubo = QuboModel::from(tsp.clone());
@@ -183,8 +183,8 @@ async fn main() {
                     ar.average_energy,
                     ar.worst_energy,
                     best_len,
-                    best_state,
-                    // "廃止",
+                    // best_state,
+                    "廃止",
                     len_vec
                 ),
                 false,
