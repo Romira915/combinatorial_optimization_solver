@@ -73,7 +73,7 @@ async fn main() {
 
     let (tsp, ising, max_dist, bias) = tsp_ising(&mut rng);
 
-    let steps = 1e5 as usize;
+    let steps = 1e6 as usize;
     let try_number_of_times = 30;
     let range_param_start = 1.;
     let range_param_end = 1e-06;
@@ -177,7 +177,7 @@ async fn main() {
             fields.push((
                 format!("{}\nparameter {}", ar.solver_name, ar.parameter),
                 format!(
-                    "[best {}; ave {}; worst {}; best_len {: >6}]\nbits {}\nlen {:?}",
+                    "[best {}; ave {}; worst {}; best_len {: >6e}]\nbits {}\nlen {:?}",
                     ar.best_energy,
                     ar.average_energy,
                     ar.worst_energy,
