@@ -155,7 +155,7 @@ async fn main() {
                 for state in &ar.states {
                     let len = match tsp.len_from_state(state.bits.view()) {
                         Ok(len) => {
-                            if len < best_len {
+                            if len < best_len || best_len == f64::MAX {
                                 best_len = len;
                                 best_state = state.bits.view();
                             }
