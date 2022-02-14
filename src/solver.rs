@@ -54,7 +54,10 @@ impl Display for SolutionRecord {
         write!(
             f,
             "spins\n {}; energy {}; flags {}\nparameter {}",
-            self.bits.to_shape((dim, dim)).unwrap(),
+            match self.bits.to_shape((dim, dim)) {
+                Ok(matrix) => matrix.to_string(),
+                Err(_) => self.bits.to_string(),
+            },
             self.energy,
             self.bits.sum(),
             self.parameter
