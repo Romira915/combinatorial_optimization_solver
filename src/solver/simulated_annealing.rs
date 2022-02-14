@@ -95,6 +95,10 @@ impl Solver for SimulatedAnnealing {
 
         obj
     }
+
+    fn solver_with_filter(&mut self, _: &crate::opt::TspNode) -> SolutionRecord {
+        self.solve()
+    }
 }
 
 impl Clone for SimulatedAnnealing {

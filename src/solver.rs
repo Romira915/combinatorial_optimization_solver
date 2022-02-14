@@ -8,13 +8,15 @@ use ndarray::{Array1, Array2};
 use ndarray_rand::rand_distr::WeightedAliasIndex;
 use rand::{prelude::SliceRandom, thread_rng, Rng};
 
+use crate::opt::TspNode;
+
 use self::{
     simulated_annealing::SimulatedAnnealing, simulated_quantum_annealing::SimulatedQuantumAnnealing,
 };
 
 pub trait Solver {
     fn solve(&mut self) -> SolutionRecord;
-    // fn solver_with_filter(&mut self) -> SolutionRecord;
+    fn solver_with_filter(&mut self, filter: &TspNode) -> SolutionRecord;
     fn record(&self) -> Option<SolutionRecord>;
     fn clone_solver(&self) -> Self;
 }
@@ -34,6 +36,7 @@ pub struct StatisticsRecord {
     pub average_energy: f64,
     pub worst_energy: f64,
     pub best_state: Array1<i8>,
+    pub worst_state: Array1<i8>,
     pub parameter: String,
     pub states: Vec<SolutionRecord>,
 }
@@ -74,6 +77,13 @@ impl SolverVariant {
         match self {
             Self::Sa(sa) => sa.solve(),
             Self::Sqa(sqa) => sqa.solve(),
+        }
+    }
+
+    pub fn solver_with_filter(&mut self, filter: &TspNode) -> SolutionRecord {
+        match self {
+            Self::Sa(sa) => sa.solver_with_filter(filter),
+            Self::Sqa(sqa) => sqa.solver_with_filter(filter),
         }
     }
 }

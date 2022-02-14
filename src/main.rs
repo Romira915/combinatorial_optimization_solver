@@ -9,7 +9,7 @@ use combinatorial_optimization_solver::solver::simulated_annealing::SimulatedAnn
 use combinatorial_optimization_solver::solver::simulated_quantum_annealing::SimulatedQuantumAnnealing;
 use combinatorial_optimization_solver::solver::{Solver, SolverVariant};
 use combinatorial_optimization_solver::webhook::Webhook;
-use ndarray::{array, Array1, Array2, ArrayView};
+use ndarray::{array, Array1, Array2, ArrayBase, ArrayView, ArrayView1, Dim, OwnedRepr};
 use ndarray_linalg::Scalar;
 use rand::distributions::Uniform;
 use rand::prelude::StdRng;
@@ -18,14 +18,13 @@ use serenity::model::channel::Embed;
 use std::convert::TryFrom;
 use tokio::time::Instant;
 
-fn number_partitioning(rng: &mut StdRng) -> Arc<IsingModel> {
-    let n = 1000;
+fn number_partitioning(n: usize, rate: f64, rng: &mut StdRng) -> (Vec<f64>, f64, Arc<IsingModel>) {
     let numbers = (rng)
         .sample_iter(Uniform::new(0., 1.))
         .take(n)
         .collect::<Vec<f64>>();
     let sum: f64 = numbers.iter().sum();
-    let m = sum * 0.5;
+    let m = sum * rate;
     let J = {
         let mut J = Array2::zeros((n, n));
         for i in 0..n {
@@ -48,13 +47,13 @@ fn number_partitioning(rng: &mut StdRng) -> Arc<IsingModel> {
     };
     let ising = Arc::new(IsingModel::new(J, h));
 
-    ising
+    (numbers, m, ising)
 }
 
 fn tsp_ising(rng: &mut StdRng) -> (TspNode, Arc<IsingModel>, f32, f32) {
     let mut tsp = TspNode::try_from("./dataset/ulysses16.tsp").unwrap();
     let max_dist = tsp.max_distance() as f32;
-    let bias = 0.55;
+    let bias = 0.6;
     tsp.set_bias(max_dist * bias);
     // tsp.set_bias(15.);
     let qubo = QuboModel::from(tsp.clone());
@@ -71,10 +70,14 @@ async fn main() {
 
     let mut rng = rand::rngs::StdRng::from_rng(rand::thread_rng()).unwrap();
 
-    let (tsp, ising, max_dist, bias) = tsp_ising(&mut rng);
+    // let (tsp, ising, max_dist, bias) = tsp_ising(&mut rng);
+    let n = 1000;
+    let rate = 0.5;
+    let (numbers, m, ising) = number_partitioning(n, rate, &mut rng);
+    let numbers = Array1::from(numbers);
 
-    let steps = 1e4 as usize;
-    let try_number_of_times = 10;
+    let steps = 1e5 as usize;
+    let try_number_of_times = 30;
     let range_param_start = 1.;
     let range_param_end = 1e-06;
     let solvers = vec![
@@ -121,6 +124,15 @@ async fn main() {
             Arc::clone(&ising),
             None,
         )),
+        SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
+            range_param_start,
+            range_param_end,
+            1. / 5.,
+            steps,
+            320,
+            Arc::clone(&ising),
+            None,
+        )),
     ];
 
     let scheduler = AnnealingScheduler::new(solvers, try_number_of_times);
@@ -134,52 +146,37 @@ async fn main() {
     let embed = Embed::fake(move |e| {
         let mut fields = Vec::new();
         for ar in &analysis_records {
-            let best_len = tsp.len_from_state(ar.best_state.view());
-            let best_len = match best_len {
-                Ok(len) => len.to_string(),
-                Err((len, message)) => format!("{} ({})", len, &message),
-            };
-            let len_vec = {
-                let mut vec = Vec::new();
-                for state in &ar.states {
-                    let len = match tsp.len_from_state(state.bits.view()) {
-                        Ok(len) => len.to_string(),
-                        Err((_len, message)) => format!("{}", &message),
-                    };
-                    vec.push(len);
-                }
-                let mut str = "[".to_string();
-                for len in vec {
-                    str.push_str(&format!("{}, ", &len));
-                }
-                str.push_str("]");
-                str
-            };
+            // let best_len = tsp.len_from_state(ar.best_state.view());
+            // let best_len = match best_len {
+            //     Ok(len) => len.to_string(),
+            //     Err((len, message)) => format!("{} ({})", len, &message),
+            // };
+            let best_state = Array1::from_iter(ar.best_state.iter().map(|s| s.to_owned() as f64));
+            let best_cost = (best_state.dot(&numbers) - m).abs();
+
+            let worst_state = Array1::from_iter(ar.worst_state.iter().map(|s| s.to_owned() as f64));
+            let worst_cost = (worst_state.dot(&numbers) - m).abs();
+
             fields.push((
                 format!("{}\nparameter {}", ar.solver_name, ar.parameter),
                 format!(
-                    "[best {}; ave {}; worst {}; best_len {}]\nbits {}\nlen {:?}",
+                    "[best E {} cost {}; ave {}; worst E {} cost {}; \nbits {}\n",
                     ar.best_energy,
+                    best_cost,
                     ar.average_energy,
                     ar.worst_energy,
-                    best_len,
-                    // ar.best_state,
+                    worst_cost,
+                    // best_state,
                     "廃止",
-                    len_vec
                 ),
                 false,
             ));
+            println!("{:?}", &fields);
         }
-        let strict_solution = tsp.opt_len().unwrap_or_default();
         e.title("Result")
             .description(format!(
-                "dataset {}; try_number_of_times {}; 厳密解 {}; bias {} * {}; 実行時間 {:?}",
-                tsp.data_name(),
-                &try_number_of_times,
-                strict_solution,
-                max_dist,
-                bias,
-                end
+                "try_number_of_times {}; n {}; rate {}; m {}; 実行時間 {:?}",
+                &try_number_of_times, &n, &rate, &m, end
             ))
             .fields(fields)
     });
