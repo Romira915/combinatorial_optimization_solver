@@ -20,7 +20,7 @@ use tokio::time::Instant;
 
 fn number_partitioning(n: usize, rate: f64, rng: &mut StdRng) -> (Vec<f64>, f64, Arc<IsingModel>) {
     let numbers = (rng)
-        .sample_iter(Uniform::new(0., 1.))
+        .sample_iter(Uniform::new(0., 100.))
         .take(n)
         .collect::<Vec<f64>>();
     let sum: f64 = numbers.iter().sum();
@@ -76,7 +76,7 @@ async fn main() {
     let (numbers, m, ising) = number_partitioning(n, rate, &mut rng);
     let numbers = Array1::from(numbers);
 
-    let steps = 1e5 as usize;
+    let steps = 3e5 as usize;
     let try_number_of_times = 30;
     let range_param_start = 1.;
     let range_param_end = 1e-06;
@@ -91,7 +91,7 @@ async fn main() {
         SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
             range_param_start,
             range_param_end,
-            1. / 5.,
+            1. / 1.,
             steps,
             1,
             Arc::clone(&ising),
@@ -100,7 +100,7 @@ async fn main() {
         SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
             range_param_start,
             range_param_end,
-            1. / 5.,
+            1. / 40.,
             steps,
             40,
             Arc::clone(&ising),
@@ -109,7 +109,7 @@ async fn main() {
         SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
             range_param_start,
             range_param_end,
-            1. / 5.,
+            1. / 80.,
             steps,
             80,
             Arc::clone(&ising),
@@ -118,7 +118,7 @@ async fn main() {
         SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
             range_param_start,
             range_param_end,
-            1. / 5.,
+            1. / 160.,
             steps,
             160,
             Arc::clone(&ising),
@@ -127,9 +127,27 @@ async fn main() {
         SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
             range_param_start,
             range_param_end,
-            1. / 5.,
+            1. / 320.,
             steps,
             320,
+            Arc::clone(&ising),
+            None,
+        )),
+        SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
+            range_param_start,
+            range_param_end,
+            1. / 640.,
+            steps,
+            640,
+            Arc::clone(&ising),
+            None,
+        )),
+        SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
+            range_param_start,
+            range_param_end,
+            1. / 1280.,
+            steps,
+            1280,
             Arc::clone(&ising),
             None,
         )),
