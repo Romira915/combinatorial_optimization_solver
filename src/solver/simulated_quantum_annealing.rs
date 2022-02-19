@@ -25,7 +25,7 @@ pub struct SimulatedQuantumAnnealing {
 }
 
 impl SimulatedQuantumAnnealing {
-    const IS_TROTTER_COPY: bool = true;
+    const IS_TROTTER_COPY: bool = false;
     pub fn new(
         G0: f64,
         Gf: f64,
@@ -58,7 +58,7 @@ impl SimulatedQuantumAnnealing {
     fn energy_list(&self) -> Array1<f64> {
         let mut energy_list = Array1::zeros(self.P);
         for (spin, e) in self.spins.rows().into_iter().zip(energy_list.iter_mut()) {
-            *e = self.model.calculate_energy(spin) as f64;
+            *e = self.model.calculate_energy(spin);
         }
 
         energy_list

@@ -29,9 +29,7 @@ fn number_partitioning(n: usize, rate: f64, rng: &mut StdRng) -> (Vec<f64>, f64,
         let mut J = Array2::zeros((n, n));
         for i in 0..n {
             for j in 0..n {
-                if i < j {
-                    J[[i, j]] = (numbers[i] * numbers[j]) as f32;
-                }
+                J[[i, j]] = numbers[i] * numbers[j];
             }
         }
         J /= 4.;
@@ -41,7 +39,7 @@ fn number_partitioning(n: usize, rate: f64, rng: &mut StdRng) -> (Vec<f64>, f64,
         let mut h = Array1::zeros(n);
         let k = sum / 2. - m;
         for i in 0..n {
-            h[i] = (k * numbers[i]) as f32;
+            h[i] = k * numbers[i];
         }
         h
     };
@@ -50,9 +48,9 @@ fn number_partitioning(n: usize, rate: f64, rng: &mut StdRng) -> (Vec<f64>, f64,
     (numbers, m, ising)
 }
 
-fn tsp_ising(rng: &mut StdRng) -> (TspNode, Arc<IsingModel>, f32, f32) {
+fn tsp_ising(rng: &mut StdRng) -> (TspNode, Arc<IsingModel>, f64, f64) {
     let mut tsp = TspNode::try_from("./dataset/ulysses16.tsp").unwrap();
-    let max_dist = tsp.max_distance() as f32;
+    let max_dist = tsp.max_distance();
     let bias = 0.6;
     tsp.set_bias(max_dist * bias);
     // tsp.set_bias(15.);

@@ -16,9 +16,9 @@ use rand::prelude::*;
 #[derive(Debug, Getters, Clone)]
 pub struct IsingModel {
     #[get = "pub"]
-    J: Array2<f32>,
+    J: Array2<f64>,
     #[get = "pub"]
-    h: Array1<f32>,
+    h: Array1<f64>,
 }
 
 trait Model {
@@ -58,7 +58,7 @@ impl IsingModel {
     const CHOICE_ITEMS: [(i8, usize); 2] = [(1, 1), (-1, 1)];
     pub const SPINS_FROM_BITS: fn(&i8) -> i8 = |q| 2 * q - 1;
 
-    pub fn new(J: Array2<f32>, h: Array1<f32>) -> Self {
+    pub fn new(J: Array2<f64>, h: Array1<f64>) -> Self {
         let n = J.dim().0;
         IsingModel { J, h }
     }
@@ -93,30 +93,30 @@ impl IsingModel {
         Self::init_dim1_spins(N, &Self::CHOICE_ITEMS, rng)
     }
 
-    pub fn calculate_energy(&self, spins: ArrayView1<i8>) -> f32 {
-        let mut e = 0_f32;
+    pub fn calculate_energy(&self, spins: ArrayView1<i8>) -> f64 {
+        let mut e = 0.;
         for i in 0..self.J().dim().0 {
             for j in 0..self.J().dim().1 {
-                e += self.J()[[i, j]] * (spins[i] * spins[j]) as f32;
+                e += self.J()[[i, j]] * (spins[i] * spins[j]) as f64;
             }
         }
 
-        for i in 0..self.h().dim() {
-            e += self.h()[i] * spins[i] as f32;
+        for i in 0..self.h().len() {
+            e += self.h()[i] * spins[i] as f64;
         }
 
         e
     }
 
-    pub fn calculate_dE(&self, spins: ArrayView1<i8>, flip_spin: usize) -> f32 {
+    pub fn calculate_dE(&self, spins: ArrayView1<i8>, flip_spin: usize) -> f64 {
         let mut dE = self.h()[flip_spin];
 
         dE += self
             .J()
             .row(flip_spin)
             .indexed_iter()
-            .map(|(index, j)| j * spins[index] as f32)
-            .sum::<f32>();
+            .map(|(index, j)| j * spins[index] as f64)
+            .sum::<f64>();
 
         if spins[flip_spin] != 1 {
             dE *= -1.;
@@ -140,14 +140,14 @@ impl Model for IsingModel {}
 #[derive(Debug, Getters, Clone)]
 pub struct QuboModel {
     #[get = "pub"]
-    Q: Array2<f32>,
+    Q: Array2<f64>,
 }
 
 impl QuboModel {
     const CHOICE_ITEMS: [(i8, usize); 2] = [(1, 1), (0, 1)];
     pub const BITS_FROM_SPINS: fn(&i8) -> i8 = |s| (s + 1) / 2;
 
-    pub fn new(Q: Array2<f32>) -> Self {
+    pub fn new(Q: Array2<f64>) -> Self {
         let n = Q.dim().0;
         QuboModel { Q }
     }
@@ -172,11 +172,11 @@ impl QuboModel {
         Self::init_dim1_spins(N, &Self::CHOICE_ITEMS, rng)
     }
 
-    pub fn calculate_energy(&self, spins: &Array1<i8>) -> f32 {
-        let mut e = 0_f32;
+    pub fn calculate_energy(&self, spins: &Array1<i8>) -> f64 {
+        let mut e = 0.;
         for i in 0..self.Q().dim().0 {
             for j in 0..self.Q().dim().1 {
-                e += self.Q()[[i, j]] * (spins[i] * spins[j]) as f32;
+                e += self.Q()[[i, j]] * (spins[i] * spins[j]) as f64;
             }
         }
 
