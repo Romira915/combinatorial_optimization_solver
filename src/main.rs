@@ -73,6 +73,7 @@ async fn main() {
     let rate = 0.5;
     let (numbers, m, ising) = number_partitioning(n, rate, &mut rng);
     let numbers = Array1::from(numbers);
+    let constant = (numbers.sum() / 2. - m).powf(2.);
 
     let steps = 3e5 as usize;
     let try_number_of_times = 30;
@@ -191,8 +192,8 @@ async fn main() {
         }
         e.title("Result")
             .description(format!(
-                "try_number_of_times {}; n {}; rate {}; m {}; 実行時間 {:?}",
-                &try_number_of_times, &n, &rate, &m, end
+                "try_number_of_times {}; n {}; rate {}; m {}; constant {};  実行時間 {:?}",
+                &try_number_of_times, &n, &rate, &m, &constant, end
             ))
             .fields(fields)
     });
