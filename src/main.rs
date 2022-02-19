@@ -34,7 +34,7 @@ fn number_partitioning(n: usize, rate: f64, rng: &mut StdRng) -> (Vec<f64>, f64,
                 }
             }
         }
-        J /= 2.;
+        J /= 4.;
         J
     };
     let h = {
@@ -152,10 +152,10 @@ async fn main() {
             //     Err((len, message)) => format!("{} ({})", len, &message),
             // };
             let best_state = Array1::from_iter(ar.best_state.iter().map(|s| s.to_owned() as f64));
-            let best_cost = (best_state.dot(&numbers) - m).abs();
+            let best_cost = (best_state.dot(&numbers) - m).pow(2.);
 
             let worst_state = Array1::from_iter(ar.worst_state.iter().map(|s| s.to_owned() as f64));
-            let worst_cost = (worst_state.dot(&numbers) - m).abs();
+            let worst_cost = (worst_state.dot(&numbers) - m).pow(2.);
 
             fields.push((
                 format!("{}\nparameter {}", ar.solver_name, ar.parameter),
