@@ -20,7 +20,7 @@ use tokio::time::Instant;
 
 fn number_partitioning(n: usize, rate: f64, rng: &mut StdRng) -> (Vec<f64>, f64, Arc<IsingModel>) {
     let numbers = (rng)
-        .sample_iter(Uniform::new(0., 100.))
+        .sample_iter(Uniform::new(0., 1000.))
         .take(n)
         .collect::<Vec<f64>>();
     let sum: f64 = numbers.iter().sum();
