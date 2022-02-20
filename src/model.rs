@@ -13,6 +13,19 @@ use ndarray_rand::{rand::thread_rng, rand_distr::WeightedAliasIndex};
 use num_traits::Float;
 use rand::prelude::*;
 
+// NOTE アニーリングマシンに単一スピンを渡してマシン側にコピーさせるべき
+pub fn clone_array_row_matrix<T>(array: ArrayView1<T>, p: usize) -> Array2<T>
+where
+    T: Clone + num_traits::Zero + Default,
+{
+    let mut matrix = Array2::zeros((p, array.len()));
+    for i in 0..p {
+        matrix.row_mut(i).assign(&array);
+    }
+
+    matrix
+}
+
 #[derive(Debug, Getters, Clone)]
 pub struct IsingModel {
     #[get = "pub"]

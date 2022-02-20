@@ -55,6 +55,36 @@ impl SimulatedQuantumAnnealing {
         }
     }
 
+    pub fn new_with_spins(
+        G0: f64,
+        Gf: f64,
+        T: f64,
+        steps: usize,
+        P: usize,
+        model: Arc<IsingModel>,
+        spins: Array2<i8>,
+        mut rng: Option<StdRng>,
+    ) -> Self {
+        let N = model.J().dim().0;
+        let mut rng = match rng {
+            Some(rng) => rng,
+            None => rand::rngs::StdRng::from_rng(rand::thread_rng()).unwrap(),
+        };
+        SimulatedQuantumAnnealing {
+            G0,
+            Gf,
+            T,
+            steps,
+            N,
+            P,
+            PT: P as f64 * T,
+            model,
+            spins,
+            rng,
+            record: None,
+        }
+    }
+
     fn energy_list(&self) -> Array1<f64> {
         let mut energy_list = Array1::zeros(self.P);
         for (spin, e) in self.spins.rows().into_iter().zip(energy_list.iter_mut()) {
