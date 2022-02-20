@@ -2,7 +2,7 @@ use core::num;
 use std::env;
 use std::sync::Arc;
 
-use combinatorial_optimization_solver::model::clone_array_row_matrix;
+use combinatorial_optimization_solver::model::{clone_array_row_matrix, IsingModel, QuboModel};
 use combinatorial_optimization_solver::opt::TspNode;
 use combinatorial_optimization_solver::solver::annealing_scheduler::AnnealingScheduler;
 use combinatorial_optimization_solver::solver::simulated_annealing::SimulatedAnnealing;
