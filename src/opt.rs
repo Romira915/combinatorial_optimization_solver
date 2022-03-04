@@ -24,7 +24,7 @@ pub struct TspNode {
     opt: Option<Vec<usize>>,
     #[get = "pub"]
     #[set = "pub"]
-    bias: f32,
+    bias: f64,
     max_dist: Option<f64>,
 }
 
@@ -115,7 +115,23 @@ impl TspNode {
         Ok(())
     }
 
-    pub fn len_from_state(&self, state: ArrayView1<i8>) -> Result<f64, (f64, String)> {
+    pub fn len_from_state(&self, state: ArrayView1<i8>) -> Result<f64, String> {
+        let dim = (state.dim() as f64).sqrt() as usize;
+        if dim != state.sum() as usize {
+            return Err("制約条件エラー".to_string());
+        }
+        let matrix = state.to_shape((dim, dim)).unwrap();
+        for row in matrix.rows() {
+            if row.sum() != 1 {
+                return Err("制約条件エラー".to_string());
+            }
+        }
+        for column in matrix.columns() {
+            if column.sum() != 1 {
+                return Err("制約条件エラー".to_string());
+            }
+        }
+
         let mut traveling_order = Vec::new();
         for (i, n) in state.iter().enumerate() {
             if *n == 1 {
@@ -140,7 +156,7 @@ impl TspNode {
         if satisfies_constraint {
             Ok(len)
         } else {
-            Err((len, "制約条件エラー".to_string()))
+            Err("制約条件エラー".to_string())
         }
     }
 }
@@ -218,7 +234,7 @@ impl From<TspNode> for QuboModel {
                         let jb = j + tsp.dim * b;
                         if i == j {
                             Q[[i + tsp.dim * a, ((i + 1) % tsp.dim) + tsp.dim * b]] +=
-                                tsp.distance(a, b) as f32;
+                                tsp.distance(a, b);
                             Q[[ia, jb]] += tsp.bias;
                         }
 

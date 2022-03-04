@@ -49,6 +49,31 @@ impl SimulatedAnnealing {
             record: None,
         }
     }
+
+    pub fn new_with_spins(
+        T0: f64,
+        Tf: f64,
+        steps: usize,
+        model: Arc<IsingModel>,
+        spins: Array1<i8>,
+        mut rng: Option<StdRng>,
+    ) -> Self {
+        let N = model.J().dim().0;
+        let mut rng = match rng {
+            Some(rng) => rng,
+            None => rand::rngs::StdRng::from_rng(rand::thread_rng()).unwrap(),
+        };
+        SimulatedAnnealing {
+            T0,
+            Tf,
+            steps,
+            N,
+            model,
+            spins,
+            rng,
+            record: None,
+        }
+    }
 }
 
 impl Solver for SimulatedAnnealing {
@@ -94,6 +119,10 @@ impl Solver for SimulatedAnnealing {
         };
 
         obj
+    }
+
+    fn solver_with_filter(&mut self, _: &crate::opt::TspNode) -> SolutionRecord {
+        self.solve()
     }
 }
 
