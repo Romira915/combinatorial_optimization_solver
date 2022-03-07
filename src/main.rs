@@ -18,7 +18,11 @@ use serenity::model::channel::Embed;
 use std::convert::TryFrom;
 use tokio::time::Instant;
 
-fn number_partitioning(n: usize, rate: f64, rng: &mut StdRng) -> (Vec<f64>, f64, Arc<IsingModel>) {
+fn number_partitioning(
+    n: usize,
+    rate: f64,
+    rng: &mut StdRng,
+) -> (Array1<f64>, f64, Arc<IsingModel>, f64) {
     let numbers = (rng)
         .sample_iter(Uniform::new(0., 1000.))
         .take(n)
@@ -45,7 +49,10 @@ fn number_partitioning(n: usize, rate: f64, rng: &mut StdRng) -> (Vec<f64>, f64,
     };
     let ising = Arc::new(IsingModel::new(J, h));
 
-    (numbers, m, ising)
+    let numbers = Array1::from(numbers);
+    let constant = (numbers.sum() / 2. - m).powf(2.);
+
+    (numbers, m, ising, constant)
 }
 
 fn tsp_ising(rng: &mut StdRng) -> (TspNode, Arc<IsingModel>, f64, f64) {
@@ -113,9 +120,7 @@ async fn main() {
     // let (tsp, ising, max_dist, bias) = tsp_ising(&mut rng);
     let n = 1000;
     let rate = 0.5;
-    let (numbers, m, ising) = number_partitioning(n, rate, &mut rng);
-    let numbers = Array1::from(numbers);
-    let constant = (numbers.sum() / 2. - m).powf(2.);
+    let (numbers, m, ising, constant) = number_partitioning(n, rate, &mut rng);
 
     let steps = 3e5 as usize;
     let try_number_of_times = 30;
