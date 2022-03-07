@@ -162,42 +162,6 @@ async fn main() {
             Arc::clone(&ising),
             None,
         )),
-        SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
-            range_param_start,
-            range_param_end,
-            1. / 160.,
-            steps,
-            160,
-            Arc::clone(&ising),
-            None,
-        )),
-        SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
-            range_param_start,
-            range_param_end,
-            1. / 320.,
-            steps,
-            320,
-            Arc::clone(&ising),
-            None,
-        )),
-        SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
-            range_param_start,
-            range_param_end,
-            1. / 640.,
-            steps,
-            640,
-            Arc::clone(&ising),
-            None,
-        )),
-        SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
-            range_param_start,
-            range_param_end,
-            1. / 1280.,
-            steps,
-            1280,
-            Arc::clone(&ising),
-            None,
-        )),
     ];
 
     let scheduler = AnnealingScheduler::new(solvers, try_number_of_times);
