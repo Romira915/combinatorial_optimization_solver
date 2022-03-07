@@ -55,6 +55,7 @@ impl SimulatedQuantumAnnealing {
         }
     }
 
+    // BUG: この関数はCloneした場合機能しない
     pub fn new_with_spins(
         G0: f64,
         Gf: f64,
@@ -70,6 +71,7 @@ impl SimulatedQuantumAnnealing {
             Some(rng) => rng,
             None => rand::rngs::StdRng::from_rng(rand::thread_rng()).unwrap(),
         };
+        println!("{}", spins[[N - 1, N - 1]]);
         SimulatedQuantumAnnealing {
             G0,
             Gf,

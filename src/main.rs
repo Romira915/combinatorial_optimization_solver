@@ -61,6 +61,48 @@ fn tsp_ising(rng: &mut StdRng) -> (TspNode, Arc<IsingModel>, f64, f64) {
     (tsp, ising, max_dist, bias)
 }
 
+fn knapsack(n: usize, capacity: u32, rng: &mut StdRng) -> Arc<IsingModel> {
+    let mut cost = rng
+        .sample_iter(Uniform::new(1, 10000))
+        .take(n)
+        .collect::<Vec<u32>>();
+    let mut weight = rng
+        .sample_iter(Uniform::new(50, 5000))
+        .take(n)
+        .collect::<Vec<u32>>();
+
+    let max_c = cost.iter().max().unwrap().to_owned();
+
+    let cost_and_weight = cost
+        .into_iter()
+        .zip(weight.into_iter())
+        .collect::<Vec<(u32, u32)>>();
+
+    let Q = {
+        let mut Q = Array2::zeros((n, n));
+        let A = max_c as f64 * 1.1;
+
+        for i in 0..n {
+            for j in 0..n {
+                Q[[i, j]] += cost_and_weight[i].1 as f64 * cost_and_weight[j].1 as f64;
+
+                if i == j {
+                    Q[[i, j]] += -2. * A * capacity as f64 * cost_and_weight[i].1 as f64;
+                    Q[[i, j]] += -2. * cost_and_weight[i].0 as f64;
+                }
+            }
+        }
+
+        Q
+    };
+
+    let qubo = QuboModel::new(Q);
+    let ising = IsingModel::from(qubo);
+    let ising = Arc::new(ising);
+
+    ising
+}
+
 #[tokio::main]
 async fn main() {
     dotenv::dotenv().expect("Not found .env file");
@@ -75,89 +117,79 @@ async fn main() {
     let numbers = Array1::from(numbers);
     let constant = (numbers.sum() / 2. - m).powf(2.);
 
-    let spins = IsingModel::init_spins(5, &mut rng);
-
     let steps = 3e5 as usize;
     let try_number_of_times = 30;
     let range_param_start = 1.;
     let range_param_end = 1e-06;
     let solvers = vec![
-        SolverVariant::Sa(SimulatedAnnealing::new_with_spins(
+        SolverVariant::Sa(SimulatedAnnealing::new(
             range_param_start,
             range_param_end,
             steps,
             Arc::clone(&ising),
-            spins.to_owned(),
             None,
         )),
-        SolverVariant::Sqa(SimulatedQuantumAnnealing::new_with_spins(
+        SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
             range_param_start,
             range_param_end,
             1. / 1.,
             steps,
             1,
             Arc::clone(&ising),
-            clone_array_row_matrix(spins.view(), 1),
             None,
         )),
-        SolverVariant::Sqa(SimulatedQuantumAnnealing::new_with_spins(
+        SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
             range_param_start,
             range_param_end,
             1. / 40.,
             steps,
             40,
             Arc::clone(&ising),
-            clone_array_row_matrix(spins.view(), 40),
             None,
         )),
-        SolverVariant::Sqa(SimulatedQuantumAnnealing::new_with_spins(
+        SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
             range_param_start,
             range_param_end,
             1. / 80.,
             steps,
             80,
             Arc::clone(&ising),
-            clone_array_row_matrix(spins.view(), 80),
             None,
         )),
-        SolverVariant::Sqa(SimulatedQuantumAnnealing::new_with_spins(
+        SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
             range_param_start,
             range_param_end,
             1. / 160.,
             steps,
             160,
             Arc::clone(&ising),
-            clone_array_row_matrix(spins.view(), 160),
             None,
         )),
-        SolverVariant::Sqa(SimulatedQuantumAnnealing::new_with_spins(
+        SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
             range_param_start,
             range_param_end,
             1. / 320.,
             steps,
             320,
             Arc::clone(&ising),
-            clone_array_row_matrix(spins.view(), 320),
             None,
         )),
-        SolverVariant::Sqa(SimulatedQuantumAnnealing::new_with_spins(
+        SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
             range_param_start,
             range_param_end,
             1. / 640.,
             steps,
             640,
             Arc::clone(&ising),
-            clone_array_row_matrix(spins.view(), 640),
             None,
         )),
-        SolverVariant::Sqa(SimulatedQuantumAnnealing::new_with_spins(
+        SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
             range_param_start,
             range_param_end,
             1. / 1280.,
             steps,
             1280,
             Arc::clone(&ising),
-            clone_array_row_matrix(spins.view(), 1280),
             None,
         )),
     ];
