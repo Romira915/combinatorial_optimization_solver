@@ -68,22 +68,21 @@ fn tsp_ising(rng: &mut StdRng) -> (TspNode, Arc<IsingModel>, f64, f64) {
     (tsp, ising, max_dist, bias)
 }
 
-fn knapsack(n: usize, capacity: u32, rng: &mut StdRng) -> Arc<IsingModel> {
+fn knapsack(
+    n: usize,
+    capacity: u32,
+    rng: &mut StdRng,
+) -> (Arc<IsingModel>, Array1<f64>, Array1<f64>) {
     let mut cost = rng
         .sample_iter(Uniform::new(1, 10000))
         .take(n)
-        .collect::<Vec<u32>>();
+        .collect::<Array1<u32>>();
     let mut weight = rng
-        .sample_iter(Uniform::new(50, 5000))
+        .sample_iter(Uniform::new(50, (capacity as f64 * 1.3) as u32))
         .take(n)
-        .collect::<Vec<u32>>();
+        .collect::<Array1<u32>>();
 
     let max_c = cost.iter().max().unwrap().to_owned();
-
-    let cost_and_weight = cost
-        .into_iter()
-        .zip(weight.into_iter())
-        .collect::<Vec<(u32, u32)>>();
 
     let Q = {
         let mut Q = Array2::zeros((n, n));
@@ -91,11 +90,11 @@ fn knapsack(n: usize, capacity: u32, rng: &mut StdRng) -> Arc<IsingModel> {
 
         for i in 0..n {
             for j in 0..n {
-                Q[[i, j]] += cost_and_weight[i].1 as f64 * cost_and_weight[j].1 as f64;
+                Q[[i, j]] += weight[i] as f64 * weight[i] as f64;
 
                 if i == j {
-                    Q[[i, j]] += -2. * A * capacity as f64 * cost_and_weight[i].1 as f64;
-                    Q[[i, j]] += -2. * cost_and_weight[i].0 as f64;
+                    Q[[i, j]] += -2. * A * capacity as f64 * weight[i] as f64;
+                    Q[[i, j]] += -2. * cost[i] as f64;
                 }
             }
         }
@@ -106,8 +105,10 @@ fn knapsack(n: usize, capacity: u32, rng: &mut StdRng) -> Arc<IsingModel> {
     let qubo = QuboModel::new(Q);
     let ising = IsingModel::from(qubo);
     let ising = Arc::new(ising);
+    let cost = cost.map(|i| *i as f64);
+    let weight = weight.map(|i| *i as f64);
 
-    ising
+    (ising, cost, weight)
 }
 
 #[tokio::main]
@@ -118,9 +119,9 @@ async fn main() {
     let mut rng = rand::rngs::StdRng::from_rng(rand::thread_rng()).unwrap();
 
     // let (tsp, ising, max_dist, bias) = tsp_ising(&mut rng);
-    let n = 1000;
-    let rate = 0.5;
-    let (numbers, m, ising, constant) = number_partitioning(n, rate, &mut rng);
+    let n = 20;
+    let capacity = 500;
+    let (ising, cost, weight) = knapsack(n, capacity, &mut rng);
 
     let steps = 3e5 as usize;
     let try_number_of_times = 30;
@@ -216,20 +217,24 @@ async fn main() {
             //     Err((len, message)) => format!("{} ({})", len, &message),
             // };
             let best_state = Array1::from_iter(ar.best_state.iter().map(|s| s.to_owned() as f64));
-            let best_cost = (best_state.dot(&numbers) - m).pow(2.);
+            let best_cost = best_state.dot(&cost);
+            let best_weight = best_state.dot(&weight);
 
             let worst_state = Array1::from_iter(ar.worst_state.iter().map(|s| s.to_owned() as f64));
-            let worst_cost = (worst_state.dot(&numbers) - m).pow(2.);
+            let worst_cost = worst_state.dot(&cost);
+            let worst_weight = worst_state.dot(&weight);
 
             fields.push((
                 format!("{}\nparameter {}", ar.solver_name, ar.parameter),
                 format!(
-                    "[best E {} cost {}; ave {}; worst E {} cost {}; \nbits {}\n",
+                    "[best E {} cost {} weight {}; ave {}; worst E {} cost {} weight {}; \nbits {}\n",
                     ar.best_energy,
                     best_cost,
+                    best_weight,
                     ar.average_energy,
                     ar.worst_energy,
                     worst_cost,
+                    worst_weight,
                     // best_state,
                     "廃止",
                 ),
@@ -239,8 +244,8 @@ async fn main() {
         }
         e.title("Result")
             .description(format!(
-                "try_number_of_times {}; n {}; rate {}; m {}; constant {};  実行時間 {:?}",
-                &try_number_of_times, &n, &rate, &m, &constant, end
+                "try_number_of_times {}; n {}; capacity {}; 実行時間 {:?}",
+                &try_number_of_times, &n, &capacity, end
             ))
             .fields(fields)
     });
