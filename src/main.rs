@@ -76,18 +76,22 @@ fn knapsack(
     let cost = rng
         .sample_iter(Uniform::new(1, 10000))
         .take(n)
-        .collect::<Array1<usize>>();
-    let weight = rng
-        .sample_iter(Uniform::new(1, capacity / (n / 4)))
+        .collect::<Array1<u32>>();
+    let mut weight = rng
+        .sample_iter(Uniform::new(0, (capacity as f64 * 1.3) as u32))
         .take(n)
-        .collect::<Array1<usize>>();
+        .collect::<Array1<u32>>();
+    let mut cost = array![5u32, 7, 2, 1, 4, 3];
+    let mut weight = array![8u32, 10, 6, 4, 5, 3];
 
     let max_c = cost.iter().max().unwrap().to_owned();
 
     let Q = {
         let mut Q = Array2::zeros((n, n));
-        let A = 1.0;
-        let B = A / 9.0;
+        let B = 40.;
+        let A = 10. * B * max_c as f64;
+        println!("A: {}", A);
+        println!("B: {}", B);
 
         for i in 0..n {
             for j in 0..n {
@@ -95,7 +99,7 @@ fn knapsack(
 
                 if i == j {
                     Q[[i, j]] += -2. * A * capacity as f64 * weight[i] as f64;
-                    Q[[i, j]] += -2. * B * cost[i] as f64;
+                    Q[[i, j]] += -B * cost[i] as f64;
                 }
             }
         }
@@ -121,8 +125,8 @@ async fn main() {
     let mut rng = rand::rngs::StdRng::from_rng(rand::thread_rng()).unwrap();
 
     // let (tsp, ising, max_dist, bias) = tsp_ising(&mut rng);
-    let n = 7;
-    let capacity = 500;
+    let n = 6;
+    let capacity = 20;
     let (ising, cost, weight) = knapsack(n, capacity, &mut rng);
 
     println!("cost {}", cost);
