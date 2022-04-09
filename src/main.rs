@@ -70,23 +70,24 @@ fn tsp_ising(rng: &mut StdRng) -> (TspNode, Arc<IsingModel>, f64, f64) {
 
 fn knapsack(
     n: usize,
-    capacity: u32,
+    capacity: usize,
     rng: &mut StdRng,
 ) -> (Arc<IsingModel>, Array1<f64>, Array1<f64>) {
-    let mut cost = rng
+    let cost = rng
         .sample_iter(Uniform::new(1, 10000))
         .take(n)
-        .collect::<Array1<u32>>();
-    let mut weight = rng
-        .sample_iter(Uniform::new(50, (capacity as f64 * 1.3) as u32))
+        .collect::<Array1<usize>>();
+    let weight = rng
+        .sample_iter(Uniform::new(1, capacity / (n / 4)))
         .take(n)
-        .collect::<Array1<u32>>();
+        .collect::<Array1<usize>>();
 
     let max_c = cost.iter().max().unwrap().to_owned();
 
     let Q = {
         let mut Q = Array2::zeros((n, n));
-        let A = max_c as f64 * 1.1;
+        let A = 1.0;
+        let B = A / 9.0;
 
         for i in 0..n {
             for j in 0..n {
@@ -94,7 +95,7 @@ fn knapsack(
 
                 if i == j {
                     Q[[i, j]] += -2. * A * capacity as f64 * weight[i] as f64;
-                    Q[[i, j]] += -2. * cost[i] as f64;
+                    Q[[i, j]] += -2. * B * cost[i] as f64;
                 }
             }
         }
@@ -103,6 +104,7 @@ fn knapsack(
     };
 
     let qubo = QuboModel::new(Q);
+    println!("{:#?}", qubo);
     let ising = IsingModel::from(qubo);
     let ising = Arc::new(ising);
     let cost = cost.map(|i| *i as f64);
@@ -119,13 +121,16 @@ async fn main() {
     let mut rng = rand::rngs::StdRng::from_rng(rand::thread_rng()).unwrap();
 
     // let (tsp, ising, max_dist, bias) = tsp_ising(&mut rng);
-    let n = 20;
+    let n = 7;
     let capacity = 500;
     let (ising, cost, weight) = knapsack(n, capacity, &mut rng);
 
+    println!("cost {}", cost);
+    println!("weight {}", weight);
+
     let steps = 3e5 as usize;
     let try_number_of_times = 30;
-    let range_param_start = 1.;
+    let range_param_start = 3.;
     let range_param_end = 1e-06;
     let solvers = vec![
         SolverVariant::Sa(SimulatedAnnealing::new(
