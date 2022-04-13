@@ -117,6 +117,8 @@ fn knapsack(
     (ising, cost, weight)
 }
 
+fn knapsack_log_encode(n: usize, capacity: usize, rng: &mut StdRng) {}
+
 #[tokio::main]
 async fn main() {
     dotenv::dotenv().expect("Not found .env file");
