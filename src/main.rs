@@ -117,7 +117,23 @@ fn knapsack(
     (ising, cost, weight)
 }
 
-fn knapsack_log_encode(n: usize, capacity: usize, rng: &mut StdRng) {}
+fn knapsack_log_encode(n: usize, capacity: usize, rng: &mut StdRng) {
+    let cost = rng
+        .sample_iter(Uniform::new(1, 10000))
+        .take(n)
+        .collect::<Array1<u32>>();
+    let mut weight = rng
+        .sample_iter(Uniform::new(0, (capacity as f64 * 1.3) as u32))
+        .take(n)
+        .collect::<Array1<u32>>();
+
+    let cost = array![5u32, 7, 2, 1, 4, 3];
+    let weight = array![8u32, 10, 6, 4, 5, 3];
+
+    let max_c = cost.iter().max().unwrap().to_owned();
+    let B = 40;
+    let A = 10 * B * max_c;
+}
 
 #[tokio::main]
 async fn main() {
