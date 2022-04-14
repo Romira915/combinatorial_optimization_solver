@@ -160,7 +160,7 @@ fn knapsack_log_encode(
             for j in n..(n + bin_n) {
                 let j_index = j - n;
 
-                Q[[i, j]] += (A * weight[i] * pow(2, j_index)) as f64;
+                Q[[i, j]] += (2 * A * weight[i] * pow(2, j_index)) as f64;
 
                 if i == j {}
             }
