@@ -135,23 +135,31 @@ fn knapsack_log_encode(
     let cost = array![5usize, 7, 2, 1, 4, 3];
     let weight = array![8usize, 10, 6, 4, 5, 3];
 
-    let Q = {
+    let (J, h) = {
         let max_c = cost.iter().max().unwrap().to_owned();
         let B = 1;
         let A = max_c + 1;
+        let C = capacity as f64 - 0.5 * weight.sum() as f64 - {
+            let mut b = 0.;
+            for i in 0..(f64::log2((capacity - 1) as f64) as usize) {
+                b += pow(2., i);
+            }
+            0.5 * b
+        };
         println!("A: {}", A);
         println!("B: {}", B);
 
         let bin_n = (f64::log2((capacity - 1) as f64) + 1.) as usize;
-        let mut Q = Array2::zeros((n + bin_n, n + bin_n));
+        let mut J = Array2::zeros((n + bin_n, n + bin_n));
+        let mut h = Array1::zeros(n + bin_n);
 
         for i in 0..n {
             for j in 0..n {
-                Q[[i, j]] += (A * weight[i] * weight[j]) as f64;
+                J[[i, j]] += A as f64 / 4. * weight[i] as f64 * weight[j] as f64;
 
                 if i == j {
-                    Q[[i, i]] += -(B as f64) * cost[i] as f64;
-                    Q[[i, i]] += -1. * (2 * A * capacity * weight[i]) as f64;
+                    h[i] += -0.5 * B as f64 * cost[i] as f64;
+                    h[i] += -C * weight[i] as f64;
                 }
             }
         }
@@ -160,7 +168,7 @@ fn knapsack_log_encode(
             for j in n..(n + bin_n) {
                 let j_index = j - n;
 
-                Q[[i, j]] += (2 * A * weight[i] * pow(2, j_index)) as f64;
+                J[[i, j]] += 0.5 * weight[i] as f64 * pow(2., j_index);
 
                 if i == j {}
             }
@@ -171,19 +179,18 @@ fn knapsack_log_encode(
                 let i_index = i - n;
                 let j_index = j - n;
 
-                Q[[i, j]] += (A * pow(2, i_index) * pow(2, j_index)) as f64;
+                J[[i, j]] += A as f64 / 4. * pow(2., i_index) * pow(2., j_index);
 
                 if i == j {
-                    Q[[i, i]] += -1. * (2 * A * capacity * pow(2, i_index)) as f64;
+                    h[i] += -C * pow(2., i_index);
                 }
             }
         }
 
-        Q
+        (J, h)
     };
 
-    let qubo = QuboModel::new(Q);
-    let ising = IsingModel::from(qubo);
+    let ising = IsingModel::new(J, h);
     let ising = Arc::new(ising);
     let cost = cost.map(|i| *i as f64);
     let weight = weight.map(|i| *i as f64);
@@ -207,7 +214,7 @@ async fn main() {
     println!("weight {}", weight);
 
     let steps = 3e5 as usize;
-    let try_number_of_times = 10;
+    let try_number_of_times = 30;
     let range_param_start = 0.1;
     let range_param_end = 1e-06;
     let T = 0.5;
