@@ -124,11 +124,11 @@ fn knapsack_log_encode(
     rng: &mut StdRng,
 ) -> (Arc<IsingModel>, Array1<f64>, Array1<f64>) {
     let cost = rng
-        .sample_iter(Uniform::new(1, 10000))
+        .sample_iter(Uniform::new(1, 50))
         .take(n)
         .collect::<Array1<usize>>();
     let weight = rng
-        .sample_iter(Uniform::new(0, (capacity as f64 * 1.3) as usize))
+        .sample_iter(Uniform::new(0, (capacity as f64 * 0.8) as usize))
         .take(n)
         .collect::<Array1<usize>>();
 
@@ -144,6 +144,7 @@ fn knapsack_log_encode(
             for i in 0..(f64::log2((capacity - 1) as f64) as usize) {
                 b += pow(2., i);
             }
+
             0.5 * b
         };
         println!("A: {}", A);
