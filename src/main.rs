@@ -82,8 +82,16 @@ fn knapsack(
         .sample_iter(Uniform::new(0, (capacity as f64 * 1.3) as u32))
         .take(n)
         .collect::<Array1<u32>>();
-    let mut cost = array![5u32, 7, 2, 1, 4, 3];
-    let mut weight = array![8u32, 10, 6, 4, 5, 3];
+    let cost = array![
+        94, 506, 416, 992, 649, 237, 457, 815, 446, 422, 791, 359, 667, 598, 7, 544, 334, 766, 994,
+        893, 633, 131, 428, 700, 617, 874, 720, 419, 794, 196, 997, 116, 908, 539, 707, 569, 537,
+        931, 726, 487, 772, 513, 81, 943, 58, 303, 764, 536, 724, 789,
+    ];
+    let weight = array![
+        485, 326, 248, 421, 322, 795, 43, 845, 955, 252, 9, 901, 122, 94, 738, 574, 715, 882, 367,
+        984, 299, 433, 682, 72, 874, 138, 856, 145, 995, 529, 199, 277, 97, 719, 242, 107, 122, 70,
+        98, 600, 645, 267, 972, 895, 213, 748, 487, 923, 29, 674,
+    ];
 
     let max_c = cost.iter().max().unwrap().to_owned();
 
@@ -132,13 +140,13 @@ fn knapsack_log_encode(
         .take(n)
         .collect::<Array1<usize>>();
 
-    let cost = array![5usize, 7, 2, 1, 4, 3];
-    let weight = array![8usize, 10, 6, 4, 5, 3];
+    let cost = array![350, 400, 450, 20, 70, 8, 5, 5,];
+    let weight = array![25, 35, 45, 5, 25, 3, 2, 2,];
 
     let (J, h) = {
         let max_c = cost.iter().max().unwrap().to_owned();
         let B = 1;
-        let A = max_c + 1;
+        let A = max_c + 30;
         let C = capacity as f64 - 0.5 * weight.sum() as f64 - {
             let mut b = 0.;
             for i in 0..(f64::log2((capacity - 1) as f64) as usize) {
@@ -207,8 +215,8 @@ async fn main() {
     let mut rng = rand::rngs::StdRng::from_rng(rand::thread_rng()).unwrap();
 
     // let (tsp, ising, max_dist, bias) = tsp_ising(&mut rng);
-    let n = 6;
-    let capacity = 20;
+    let n = 8;
+    let capacity = 104;
     let (ising, cost, weight) = knapsack_log_encode(n, capacity, &mut rng);
 
     println!("cost {}", cost);
@@ -216,7 +224,7 @@ async fn main() {
 
     let steps = 3e5 as usize;
     let try_number_of_times = 30;
-    let range_param_start = 0.1;
+    let range_param_start = 3.;
     let range_param_end = 1e-06;
     let T = 0.5;
     let solvers = vec![
@@ -330,10 +338,13 @@ async fn main() {
             ));
             println!("{:?}", &fields);
         }
+        let opt = array![1, 0, 1, 1, 1, 0, 1, 1,];
+        let opt = opt.map(|i| i.to_owned() as f64);
+        let optimal_solution = opt.dot(&cost);
         e.title("Result")
             .description(format!(
-                "try_number_of_times {}; n {}; capacity {}; 実行時間 {:?}",
-                &try_number_of_times, &n, &capacity, end
+                "try_number_of_times {}; n {}; capacity {}; 最適解 {}; 実行時間 {:?}",
+                &try_number_of_times, &n, &capacity, &optimal_solution, end
             ))
             .fields(fields)
     });
