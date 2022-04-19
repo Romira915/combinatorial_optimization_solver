@@ -1,3 +1,4 @@
+from lib2to3.pgen2 import token
 import math
 import string
 import dimod
@@ -5,6 +6,9 @@ from pyqubo import solve_qubo
 from pyqubo import Constraint
 from pyqubo import Array, LogEncInteger
 from openjij import SQASampler
+from dwave.system import DWaveSampler, EmbeddingComposite
+
+endpoint = "https://cloud.dwavesys.com/sapi/"
 
 W = 104
 # c = {0: 5, 1: 7,  2: 2, 3: 1, 4: 4, 5: 3}
@@ -27,7 +31,7 @@ y = LogEncInteger("y", (0, W))
 
 
 key1 = max(c, key=lambda k: c[k])
-B = 40
+B = 1
 A = 10 * B * c[key1]
 
 HA = Constraint(
@@ -56,18 +60,19 @@ Q = H
 model = Q.compile()
 q, offset = model.to_qubo()
 
-sampler = SQASampler()
-sampleset = sampler.sample_qubo(q, num_reads=10)
+dw_sampler = DWaveSampler(solver='Advantage_system4.1', token=TOKEN)
+# sampler = SQASampler()
+sampler = EmbeddingComposite(dw_sampler)
+sampleset = sampler.sample_qubo(q, num_reads=10, annealing_time=50)
 decoded_sample = model.decode_sample(sampleset.first.sample, vartype="BINARY")
 print()
 print("[Results]")
+print(sampleset.record)
 print()
 print("decoded_sample.sample:")
 print(decoded_sample.sample)
 print()
-print("x (選ばれた宝物) :")
 
-treasures = ['A', 'B', 'C', 'D', 'E', 'F', 'G']
 weight = 0
 cost = 0
 
@@ -86,5 +91,5 @@ print("スラック変数Y = {}".format(sol_y))
 print()
 print("broken")
 print(decoded_sample.constraints(only_broken=True))
-print("合計の重さ : "+str(weight/10)+"kg")
-print("合計の価格 : $"+str(cost)+",000")
+print("合計の重さ : "+str(weight))
+print("合計の価格 : "+str(cost))
