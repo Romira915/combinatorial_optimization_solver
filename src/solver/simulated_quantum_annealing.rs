@@ -1,4 +1,5 @@
 use ndarray::{Array, Array1, Array2};
+use ndarray_linalg::Scalar;
 use num_traits::Float;
 use rand::{prelude::StdRng, Rng, SeedableRng};
 use std::{f64::consts, sync::Arc};
@@ -126,17 +127,48 @@ impl Solver for SimulatedQuantumAnnealing {
                 let delta_2 = {
                     let b = {
                         let mut b = 0.;
-                        for i in 0..self.N {
+                        for i in 0..self.P {
                             b += self.model.calculate_energy(self.spins.row(i));
                         }
+                        println!("yosi");
 
                         for i in 0..self.N {
                             for k in 0..self.P {
-                                b += B * self.spins[[k, i]] * self.spins[[]];
+                                b += B
+                                    * (self.spins[[k, i]] * self.spins[[(k + 1) % self.P, i]])
+                                        as f64;
                             }
                         }
+                        println!("yosi2");
+
+                        b
                     };
+
+                    let a = {
+                        let mut a = 0.;
+                        let mut fix_spins = self.spins.clone();
+                        fix_spins[[k, flip_local_index]] = -1 * fix_spins[[k, flip_local_index]];
+
+                        for i in 0..self.P {
+                            a += self.model.calculate_energy(fix_spins.row(i));
+                        }
+                        println!("yosi3");
+
+                        for i in 0..self.N {
+                            for k in 0..self.P {
+                                a += B
+                                    * (fix_spins[[k, i]] * fix_spins[[(k + 1) % self.P, i]]) as f64;
+                            }
+                        }
+                        println!("yosi4");
+
+                        a
+                    };
+
+                    a - b
                 };
+                println!("d1 {}", delta);
+                println!("d2 {}", delta_2);
 
                 let p = f64::min(1., (-(delta_E + delta_trotter) / self.T).exp());
                 if solver::probability_boolean(p, &mut self.rng) {
