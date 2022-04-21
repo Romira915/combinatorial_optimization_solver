@@ -113,13 +113,31 @@ impl Solver for SimulatedQuantumAnnealing {
                 //             + self.spins[[(k + 1) % self.P, flip_local_index]]))
                 //         as f64;
 
-                let B = self.T * (1.0 / (G / self.PT).tanh()).log(consts::E);
-                let delta_trotter = B
+                let B = self.T / 2. * (1.0 / (G / self.PT).tanh()).log(consts::E);
+                let delta_trotter = 2.
+                    * B
                     * (self.spins[[k, flip_local_index]]
                         * (self.spins[[(k + self.P - 1) % self.P, flip_local_index]]
                             + self.spins[[(k + 1) % self.P, flip_local_index]]))
                         as f64;
                 let delta_E = self.model.calculate_dE(self.spins.row(k), flip_local_index) as f64;
+
+                let delta = delta_E + delta_trotter;
+                let delta_2 = {
+                    let b = {
+                        let mut b = 0.;
+                        for i in 0..self.N {
+                            b += self.model.calculate_energy(self.spins.row(i));
+                        }
+
+                        for i in 0..self.N {
+                            for k in 0..self.P {
+                                b += B * self.spins[[k, i]] * self.spins[[]];
+                            }
+                        }
+                    };
+                };
+
                 let p = f64::min(1., (-(delta_E + delta_trotter) / self.T).exp());
                 if solver::probability_boolean(p, &mut self.rng) {
                     IsingModel::accept_flip(self.spins.row_mut(k), flip_local_index);

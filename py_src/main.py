@@ -15,11 +15,17 @@ load_dotenv()
 TOKEN = os.getenv("TOKEN")
 endpoint = "https://cloud.dwavesys.com/sapi/"
 
-W = 104
+W = 995
 # c = {0: 5, 1: 7,  2: 2, 3: 1, 4: 4, 5: 3}
 # w = {0: 8, 1: 10, 2: 6, 3: 4, 4: 5, 5: 3}
-cost = [350, 400, 450, 20, 70, 8, 5, 5, ]
-weight = [25, 35, 45, 5, 25, 3, 2, 2, ]
+cost = [
+    94, 506, 416, 992, 649, 237, 457, 815, 446, 422, 791, 359, 667, 598, 7, 544, 334, 766, 994,
+    893, 633, 131, 428, 700, 617, 874, 720, 419, 794, 196, 997, 116, 908, 539, 707, 569, 537,
+    931, 726, 487, 772, 513, 81, 943, 58, 303, 764, 536, 724, 789,
+]
+weight = [485, 326, 248, 421, 322, 795, 43, 845, 955, 252, 9, 901, 122, 94, 738, 574, 715, 882, 367,
+          984, 299, 433, 682, 72, 874, 138, 856, 145, 995, 529, 199, 277, 97, 719, 242, 107, 122, 70,
+          98, 600, 645, 267, 972, 895, 213, 748, 487, 923, 29, 674, ]
 c = {}
 w = {}
 N = len(cost)
@@ -37,7 +43,7 @@ y = LogEncInteger("y", (0, W))
 
 key1 = max(c, key=lambda k: c[k])
 B = 1
-A = 10 * B * c[key1]
+A = B * c[key1] * 5
 
 HA = Constraint(
     A * (W - sum(w[a] * x[a] for a in range(N)) - y)**2, label='HA'
@@ -48,7 +54,7 @@ HB = - B * sum(c[a] * x[a] for a in range(N))
 
 print("[Inputs]")
 print()
-print("W (ナップサックの容量) : "+str(W/10)+"kg")
+print("W (ナップサックの容量) : "+str(W)+"kg")
 print("N (宝物の数): "+str(N))
 print()
 print("weight list")
@@ -65,10 +71,10 @@ Q = H
 model = Q.compile()
 q, offset = model.to_qubo()
 
-dw_sampler = DWaveSampler(solver='Advantage_system4.1', token=TOKEN)
 # sampler = SQASampler()
+dw_sampler = DWaveSampler(solver='Advantage_system4.1', token=TOKEN)
 sampler = EmbeddingComposite(dw_sampler)
-sampleset = sampler.sample_qubo(q, num_reads=10, annealing_time=50)
+sampleset = sampler.sample_qubo(q, num_reads=50)
 decoded_sample = model.decode_sample(sampleset.first.sample, vartype="BINARY")
 print()
 print("[Results]")
