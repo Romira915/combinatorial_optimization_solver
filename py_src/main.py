@@ -7,7 +7,12 @@ from pyqubo import Constraint
 from pyqubo import Array, LogEncInteger
 from openjij import SQASampler
 from dwave.system import DWaveSampler, EmbeddingComposite
+from dotenv import load_dotenv
+import os
 
+load_dotenv()
+
+TOKEN = os.getenv("TOKEN")
 endpoint = "https://cloud.dwavesys.com/sapi/"
 
 W = 104
