@@ -140,21 +140,13 @@ fn knapsack_log_encode(
         .take(n)
         .collect::<Array1<usize>>();
 
-    let cost = array![
-        94, 506, 416, 992, 649, 237, 457, 815, 446, 422, 791, 359, 667, 598, 7, 544, 334, 766, 994,
-        893, 633, 131, 428, 700, 617, 874, 720, 419, 794, 196, 997, 116, 908, 539, 707, 569, 537,
-        931, 726, 487, 772, 513, 81, 943, 58, 303, 764, 536, 724, 789,
-    ];
-    let weight = array![
-        485, 326, 248, 421, 322, 795, 43, 845, 955, 252, 9, 901, 122, 94, 738, 574, 715, 882, 367,
-        984, 299, 433, 682, 72, 874, 138, 856, 145, 995, 529, 199, 277, 97, 719, 242, 107, 122, 70,
-        98, 600, 645, 267, 972, 895, 213, 748, 487, 923, 29, 674,
-    ];
+    let cost = array![24, 13, 23, 15, 16];
+    let weight = array![12, 7, 11, 8, 9];
 
     let (J, h) = {
         let max_c = cost.iter().max().unwrap().to_owned();
         let B = 40;
-        let A = max_c * B * 10;
+        let A = max_c * B * 13;
         let C = capacity as f64 - 0.5 * weight.sum() as f64 - {
             let mut b = 0.;
             for i in 0..(f64::log2((capacity - 1) as f64) as usize) {
@@ -223,8 +215,8 @@ async fn main() {
     let mut rng = rand::rngs::StdRng::from_rng(rand::thread_rng()).unwrap();
 
     // let (tsp, ising, max_dist, bias) = tsp_ising(&mut rng);
-    let n = 50;
-    let capacity = 995;
+    let n = 5;
+    let capacity = 26;
     let (ising, cost, weight) = knapsack_log_encode(n, capacity, &mut rng);
 
     println!("cost {}", cost);
@@ -346,10 +338,7 @@ async fn main() {
             ));
             println!("{:?}", &fields);
         }
-        let opt = array![
-            0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0,
-            0, 1, 0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0,
-        ];
+        let opt = array![0, 1, 1, 1, 0];
         let opt = opt.map(|i| i.to_owned() as f64);
         let optimal_solution = opt.dot(&cost);
         e.title("Result")

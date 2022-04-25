@@ -123,52 +123,52 @@ impl Solver for SimulatedQuantumAnnealing {
                         as f64;
                 let delta_E = self.model.calculate_dE(self.spins.row(k), flip_local_index) as f64;
 
-                let delta = delta_E + delta_trotter;
-                let (delta_2, delta_2_t) = {
-                    let (b, b_q) = {
-                        let mut b = 0.;
-                        let mut b_q = 0.;
-                        for i in 0..self.P {
-                            b += self.model.calculate_energy(self.spins.row(i));
-                        }
+                // let delta = delta_E + delta_trotter;
+                // let (delta_2, delta_2_t) = {
+                //     let (b, b_q) = {
+                //         let mut b = 0.;
+                //         let mut b_q = 0.;
+                //         for i in 0..self.P {
+                //             b += self.model.calculate_energy(self.spins.row(i));
+                //         }
 
-                        for i in 0..self.N {
-                            for k in 0..self.P {
-                                b_q += -B
-                                    * (self.spins[[k, i]] * self.spins[[(k + 1) % self.P, i]])
-                                        as f64;
-                            }
-                        }
+                //         for i in 0..self.N {
+                //             for k in 0..self.P {
+                //                 b_q += -B
+                //                     * (self.spins[[k, i]] * self.spins[[(k + 1) % self.P, i]])
+                //                         as f64;
+                //             }
+                //         }
 
-                        (b, b_q)
-                    };
+                //         (b, b_q)
+                //     };
 
-                    let (a, a_q) = {
-                        let mut a = 0.;
-                        let mut a_q = 0.;
-                        let mut fix_spins = self.spins.clone();
-                        fix_spins[[k, flip_local_index]] = -1 * fix_spins[[k, flip_local_index]];
+                //     let (a, a_q) = {
+                //         let mut a = 0.;
+                //         let mut a_q = 0.;
+                //         let mut fix_spins = self.spins.clone();
+                //         fix_spins[[k, flip_local_index]] = -1 * fix_spins[[k, flip_local_index]];
 
-                        for i in 0..self.P {
-                            a += self.model.calculate_energy(fix_spins.row(i));
-                        }
+                //         for i in 0..self.P {
+                //             a += self.model.calculate_energy(fix_spins.row(i));
+                //         }
 
-                        for i in 0..self.N {
-                            for k in 0..self.P {
-                                a_q += -B
-                                    * (fix_spins[[k, i]] * fix_spins[[(k + 1) % self.P, i]]) as f64;
-                            }
-                        }
+                //         for i in 0..self.N {
+                //             for k in 0..self.P {
+                //                 a_q += -B
+                //                     * (fix_spins[[k, i]] * fix_spins[[(k + 1) % self.P, i]]) as f64;
+                //             }
+                //         }
 
-                        (a, a_q)
-                    };
+                //         (a, a_q)
+                //     };
 
-                    (a - b, a_q - b_q)
-                };
-                println!("d1 {}", delta_E);
-                println!("d2 {}", delta_2);
-                println!("delta_2_t {}", delta_2_t);
-                println!("delta_trotter {}", delta_trotter);
+                //     (a - b, a_q - b_q)
+                // };
+                // println!("d1 {}", delta_E);
+                // println!("d2 {}", delta_2);
+                // println!("delta_2_t {}", delta_2_t);
+                // println!("delta_trotter {}", delta_trotter);
 
                 let p = f64::min(1., (-(delta_E + delta_trotter) / self.T).exp());
                 if solver::probability_boolean(p, &mut self.rng) {

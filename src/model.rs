@@ -128,7 +128,13 @@ impl IsingModel {
             .J()
             .row(flip_spin)
             .indexed_iter()
-            .map(|(index, j)| j * spins[index] as f64)
+            .map(|(index, j)| {
+                if flip_spin == index {
+                    0.
+                } else {
+                    2. * j * spins[index] as f64
+                }
+            })
             .sum::<f64>();
 
         if spins[flip_spin] != 1 {
