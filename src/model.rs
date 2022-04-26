@@ -110,7 +110,9 @@ impl IsingModel {
         let mut e = 0.;
         for i in 0..self.J().dim().0 {
             for j in 0..self.J().dim().1 {
-                e += self.J()[[i, j]] * (spins[i] * spins[j]) as f64;
+                if (i < j) {
+                    e += self.J()[[i, j]] * (spins[i] * spins[j]) as f64;
+                }
             }
         }
 
@@ -132,7 +134,7 @@ impl IsingModel {
                 if flip_spin == index {
                     0.
                 } else {
-                    2. * j * spins[index] as f64
+                    1. * j * spins[index] as f64
                 }
             })
             .sum::<f64>();

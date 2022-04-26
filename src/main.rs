@@ -140,13 +140,13 @@ fn knapsack_log_encode(
         .take(n)
         .collect::<Array1<usize>>();
 
-    let cost = array![24, 13, 23, 15, 16];
-    let weight = array![12, 7, 11, 8, 9];
+    let cost = array![5, 7, 2, 1, 4, 3];
+    let weight = array![8, 10, 6, 4, 5, 3];
 
     let (J, h) = {
         let max_c = cost.iter().max().unwrap().to_owned();
         let B = 40;
-        let A = max_c * B * 13;
+        let A = max_c * B * 10;
         let C = capacity as f64 - 0.5 * weight.sum() as f64 - {
             let mut b = 0.;
             for i in 0..(f64::log2((capacity - 1) as f64) as usize) {
@@ -164,7 +164,9 @@ fn knapsack_log_encode(
 
         for i in 0..n {
             for j in 0..n {
-                J[[i, j]] += A as f64 / 4. * weight[i] as f64 * weight[j] as f64;
+                if i <= j {
+                    J[[i, j]] += A as f64 / 4. * weight[i] as f64 * weight[j] as f64;
+                }
 
                 if i == j {
                     h[i] += -0.5 * B as f64 * cost[i] as f64;
@@ -177,7 +179,9 @@ fn knapsack_log_encode(
             for j in n..(n + bin_n) {
                 let j_index = j - n;
 
-                J[[i, j]] += 0.5 * weight[i] as f64 * pow(2., j_index);
+                if i <= j {
+                    J[[i, j]] += 0.5 * weight[i] as f64 * pow(2., j_index);
+                }
 
                 if i == j {}
             }
@@ -188,13 +192,16 @@ fn knapsack_log_encode(
                 let i_index = i - n;
                 let j_index = j - n;
 
-                J[[i, j]] += A as f64 / 4. * pow(2., i_index) * pow(2., j_index);
+                if i <= j {
+                    J[[i, j]] += A as f64 / 4. * pow(2., i_index) * pow(2., j_index);
+                }
 
                 if i == j {
                     h[i] += -C * pow(2., i_index);
                 }
             }
         }
+        println!("J {:#?}", J);
 
         (J, h)
     };
@@ -207,6 +214,31 @@ fn knapsack_log_encode(
     (ising, cost, weight)
 }
 
+// fn knapsack_energy(
+//     spins: ArrayView1<i8>,
+//     cost: Array1<f64>,
+//     weight: Array1<f64>,
+//     W: f64,
+//     Y: f64,
+// ) -> f64 {
+//     let max_c = {
+//         let cost = cost.map(|i| *i as i32);
+//         cost.iter().max().unwrap().to_owned()
+//     } as f64;
+
+//     let B = 40.;
+//     let A = max_c * B * 10.;
+
+//     let H_a = {
+//         let select_weight = {
+//             let mut s = 0.;
+//             for i in 0..weight.len() {
+//                 s += weight * spi
+//             }
+//         }
+//     }
+// }
+
 #[tokio::main]
 async fn main() {
     dotenv::dotenv().expect("Not found .env file");
@@ -215,14 +247,14 @@ async fn main() {
     let mut rng = rand::rngs::StdRng::from_rng(rand::thread_rng()).unwrap();
 
     // let (tsp, ising, max_dist, bias) = tsp_ising(&mut rng);
-    let n = 5;
-    let capacity = 26;
+    let n = 6;
+    let capacity = 20;
     let (ising, cost, weight) = knapsack_log_encode(n, capacity, &mut rng);
 
     println!("cost {}", cost);
     println!("weight {}", weight);
 
-    let steps = 3e5 as usize;
+    let steps = 3e4 as usize;
     let try_number_of_times = 30;
     let range_param_start = 3.;
     let range_param_end = 1e-06;
@@ -338,7 +370,7 @@ async fn main() {
             ));
             println!("{:?}", &fields);
         }
-        let opt = array![0, 1, 1, 1, 0];
+        let opt = array![0, 1, 1, 1, 0, 0];
         let opt = opt.map(|i| i.to_owned() as f64);
         let optimal_solution = opt.dot(&cost);
         e.title("Result")

@@ -1,4 +1,4 @@
-use ndarray::{Array, Array1, Array2};
+use ndarray::{array, Array, Array1, Array2};
 use ndarray_linalg::Scalar;
 use num_traits::Float;
 use rand::{prelude::StdRng, Rng, SeedableRng};
@@ -214,6 +214,11 @@ impl Solver for SimulatedQuantumAnnealing {
             ),
         };
         self.record = Some(record.clone());
+
+        let array = array![-1, 1, -1, -1, 1, 1, -1, 1, -1, -1, -1];
+        let opt_e = self.model.calculate_energy(array.view());
+        println!("opt E {}", opt_e);
+        println!("今の {}", self.model.calculate_energy(self.spins.row(0)));
 
         record
     }

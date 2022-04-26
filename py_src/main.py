@@ -36,7 +36,7 @@ y = LogEncInteger("y", (0, W))
 
 key1 = max(c, key=lambda k: c[k])
 B = 10
-A = B * c[key1] * 30
+A = B * c[key1] * 40
 
 HA = Constraint(
     A * (W - sum(w[a] * x[a] for a in range(N)) - y)**2, label='HA'
