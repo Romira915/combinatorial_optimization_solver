@@ -140,21 +140,22 @@ fn knapsack_log_encode(
         .take(n)
         .collect::<Array1<usize>>();
 
-    let cost = array![5, 7, 2, 1, 4, 3];
-    let weight = array![8, 10, 6, 4, 5, 3];
+    let cost = array![70, 20, 39, 37, 7, 5, 10];
+    let weight = array![31, 10, 20, 19, 4, 3, 6];
 
     let (J, h) = {
-        let max_c = cost.iter().max().unwrap().to_owned();
-        let B = 40;
-        let A = max_c * B * 10;
-        let C = capacity as f64 - 0.5 * weight.sum() as f64 - {
+        let max_c = cost.iter().max().unwrap().to_owned() as f64;
+        let B = 1.;
+        let A = B * max_c + 0.25;
+        let y_sum = {
             let mut b = 0.;
             for i in 0..(f64::log2((capacity - 1) as f64) as usize) {
                 b += pow(2., i);
             }
 
-            0.5 * b
+            b
         };
+        let C = capacity as f64 - 0.5 * weight.sum() as f64 - 0.5 * y_sum;
         println!("A: {}", A);
         println!("B: {}", B);
 
@@ -164,13 +165,15 @@ fn knapsack_log_encode(
 
         for i in 0..n {
             for j in 0..n {
-                if i <= j {
-                    J[[i, j]] += A as f64 / 4. * weight[i] as f64 * weight[j] as f64;
+                if i < j {
+                    J[[i, j]] += A / 4. * (weight[i] * weight[j]) as f64;
                 }
 
                 if i == j {
-                    h[i] += -0.5 * B as f64 * cost[i] as f64;
-                    h[i] += -C * weight[i] as f64;
+                    h[i] += -B / 2. * cost[i] as f64;
+                    h[i] += A / 2. * (weight.sum() * weight[i]) as f64;
+                    h[i] += A * -1. * capacity as f64 * weight[i] as f64;
+                    h[i] += A / 2. * y_sum * weight[i] as f64;
                 }
             }
         }
@@ -179,8 +182,8 @@ fn knapsack_log_encode(
             for j in n..(n + bin_n) {
                 let j_index = j - n;
 
-                if i <= j {
-                    J[[i, j]] += 0.5 * weight[i] as f64 * pow(2., j_index);
+                if i < j {
+                    J[[i, j]] += A / 2. * weight[i] as f64 * pow(2., j_index);
                 }
 
                 if i == j {}
@@ -192,12 +195,14 @@ fn knapsack_log_encode(
                 let i_index = i - n;
                 let j_index = j - n;
 
-                if i <= j {
-                    J[[i, j]] += A as f64 / 4. * pow(2., i_index) * pow(2., j_index);
+                if i < j {
+                    J[[i, j]] += A / 4. * (pow(2., i_index) * pow(2., j_index));
                 }
 
                 if i == j {
-                    h[i] += -C * pow(2., i_index);
+                    h[i] += A / 2. * (y_sum * pow(2., i_index));
+                    h[i] += A / 2. * (weight.sum() as f64 * pow(2., i_index));
+                    h[i] += -A * capacity as f64 * pow(2., i_index);
                 }
             }
         }
@@ -247,8 +252,10 @@ async fn main() {
     let mut rng = rand::rngs::StdRng::from_rng(rand::thread_rng()).unwrap();
 
     // let (tsp, ising, max_dist, bias) = tsp_ising(&mut rng);
-    let n = 6;
-    let capacity = 20;
+    let n = 7;
+    let capacity = 50;
+    let opt = array![1, 0, 0, 1, 0, 0, 0];
+
     let (ising, cost, weight) = knapsack_log_encode(n, capacity, &mut rng);
 
     println!("cost {}", cost);
@@ -294,24 +301,24 @@ async fn main() {
             Arc::clone(&ising),
             None,
         )),
-        SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
-            range_param_start,
-            range_param_end,
-            T,
-            steps,
-            40,
-            Arc::clone(&ising),
-            None,
-        )),
-        SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
-            range_param_start,
-            range_param_end,
-            T,
-            steps,
-            80,
-            Arc::clone(&ising),
-            None,
-        )),
+        // SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
+        //     range_param_start,
+        //     range_param_end,
+        //     T,
+        //     steps,
+        //     40,
+        //     Arc::clone(&ising),
+        //     None,
+        // )),
+        // SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
+        //     range_param_start,
+        //     range_param_end,
+        //     T,
+        //     steps,
+        //     80,
+        //     Arc::clone(&ising),
+        //     None,
+        // )),
     ];
 
     let scheduler = AnnealingScheduler::new(solvers, try_number_of_times);
@@ -370,7 +377,6 @@ async fn main() {
             ));
             println!("{:?}", &fields);
         }
-        let opt = array![0, 1, 1, 1, 0, 0];
         let opt = opt.map(|i| i.to_owned() as f64);
         let optimal_solution = opt.dot(&cost);
         e.title("Result")

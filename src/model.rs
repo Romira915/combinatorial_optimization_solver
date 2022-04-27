@@ -110,7 +110,7 @@ impl IsingModel {
         let mut e = 0.;
         for i in 0..self.J().dim().0 {
             for j in 0..self.J().dim().1 {
-                if (i < j) {
+                if i < j {
                     e += self.J()[[i, j]] * (spins[i] * spins[j]) as f64;
                 }
             }
