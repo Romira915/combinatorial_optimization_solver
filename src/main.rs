@@ -140,8 +140,8 @@ fn knapsack_log_encode(
         .take(n)
         .collect::<Array1<usize>>();
 
-    let cost = array![5, 7, 2, 1, 4, 3];
-    let weight = array![8, 10, 6, 4, 5, 3];
+    let cost = array![135, 139, 149, 150, 156, 163, 173, 184, 192, 201, 210, 214, 221, 229, 240];
+    let weight = array![70, 73, 77, 80, 82, 87, 90, 94, 98, 106, 110, 113, 115, 118, 120];
 
     let (J, h) = {
         let max_c = cost.iter().max().unwrap().to_owned();
@@ -247,10 +247,25 @@ async fn main() {
     let mut rng = rand::rngs::StdRng::from_rng(rand::thread_rng()).unwrap();
 
     // let (tsp, ising, max_dist, bias) = tsp_ising(&mut rng);
-    let n = 6;
-    let capacity = 20;
+    let n = 15;
+    let capacity = 750;
+    let opt = array![1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1];
+    let opt = opt.map(|i| i.to_owned() as f64);
     let (ising, cost, weight) = knapsack_log_encode(n, capacity, &mut rng);
+    let y_num = ising.h().len() - n;
 
+    let opt_weight = opt.dot(&weight) as usize;
+    let opt_weight_bin = format!("{:b}", opt_weight);
+    let opt_weight_bin = {
+        let mut vec = Vec::new();
+        let mut iter = opt_weight_bin.chars().rev();
+        for i in 0..y_num {
+            let n = iter.next().unwrap().to_digit(10).unwrap();
+            vec.push(n);
+        }
+
+        vec
+    };
     println!("cost {}", cost);
     println!("weight {}", weight);
 
@@ -294,24 +309,6 @@ async fn main() {
             Arc::clone(&ising),
             None,
         )),
-        SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
-            range_param_start,
-            range_param_end,
-            T,
-            steps,
-            40,
-            Arc::clone(&ising),
-            None,
-        )),
-        SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
-            range_param_start,
-            range_param_end,
-            T,
-            steps,
-            80,
-            Arc::clone(&ising),
-            None,
-        )),
     ];
 
     let scheduler = AnnealingScheduler::new(solvers, try_number_of_times);
@@ -330,15 +327,31 @@ async fn main() {
             //     Ok(len) => len.to_string(),
             //     Err((len, message)) => format!("{} ({})", len, &message),
             // };
-            let best_state = Array1::from_iter(ar.best_state.iter().map(|s| s.to_owned() as f64));
-            let best_state = best_state.slice(s![0..n]);
+            let best_spins = Array1::from_iter(ar.best_state.iter().map(|s| s.to_owned() as f64));
+            let best_state = best_spins.slice(s![0..n]);
+            let best_bin = best_spins.slice(s![n..best_spins.len()]);
             let best_cost = best_state.dot(&cost);
             let best_weight = best_state.dot(&weight);
+            let best_hamming = {
+                let mut d = 0.;
+                for i in 0..n {
+                    d += (best_state[i] as f64 - opt[i]).abs();
+                }
+                d / n as f64
+            };
 
-            let worst_state = Array1::from_iter(ar.worst_state.iter().map(|s| s.to_owned() as f64));
-            let worst_state = worst_state.slice(s![0..n]);
+            let worst_spins = Array1::from_iter(ar.worst_state.iter().map(|s| s.to_owned() as f64));
+            let worst_state = worst_spins.slice(s![0..n]);
+            let worst_bin = worst_spins.slice(s![n..worst_spins.len()]);
             let worst_cost = worst_state.dot(&cost);
             let worst_weight = worst_state.dot(&weight);
+            let worst_hamming = {
+                let mut d = 0.;
+                for i in 0..y_num {
+                    d += (worst_state[i] as f64 - opt[i]).abs();
+                }
+                d / n as f64
+            };
 
             let mut cost_list = Vec::new();
             let mut weight_list = Vec::new();
@@ -353,12 +366,14 @@ async fn main() {
             fields.push((
                 format!("{}\nparameter {}", ar.solver_name, ar.parameter),
                 format!(
-                    "[best E {} cost {} weight {}; ave {}; worst E {} cost {} weight {}; \nbits {}\ncost {:?}\nweight {:?}",
+                    "[best E {} hamming {} cost {} weight {}; ave {}; worst E {} hamming {} cost {} weight {}; \nbits {}\ncost {:?}\nweight {:?}",
                     ar.best_energy,
+                    best_hamming,
                     best_cost,
                     best_weight,
                     ar.average_energy,
                     ar.worst_energy,
+                    worst_hamming,
                     worst_cost,
                     worst_weight,
                     // best_state,
@@ -370,13 +385,11 @@ async fn main() {
             ));
             println!("{:?}", &fields);
         }
-        let opt = array![0, 1, 1, 1, 0, 0];
-        let opt = opt.map(|i| i.to_owned() as f64);
         let optimal_solution = opt.dot(&cost);
         e.title("Result")
             .description(format!(
-                "try_number_of_times {}; n {}; capacity {}; 最適解 {}; 実行時間 {:?}",
-                &try_number_of_times, &n, &capacity, &optimal_solution, end
+                "try_number_of_times {}; n {}; y_num {} capacity {}; 最適解 {}; 実行時間 {:?}",
+                &try_number_of_times, &n, &y_num, &capacity, &optimal_solution, end
             ))
             .fields(fields)
     });
