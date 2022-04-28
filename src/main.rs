@@ -141,12 +141,12 @@ fn knapsack_log_encode(
         .collect::<Array1<usize>>();
 
     let cost = array![135, 139, 149, 150, 156, 163, 173, 184, 192, 201, 210, 214, 221, 229, 240];
-    let weight = array![70, 73, 77, 80, 82, 87, 90, 94, 98, 106, 110, 113, 115, 118, 120];
+    let weight = array![70, 73, 77, 80, 82, 87, 90, 94, 98, 106, 110, 113, 115, 118, 120,];
 
     let (J, h) = {
-        let max_c = cost.iter().max().unwrap().to_owned();
-        let B = 40;
-        let A = max_c * B * 10;
+        let max_c = cost.iter().max().unwrap().to_owned() as f64;
+        let B = 1.;
+        let A = max_c * B * 10.;
         let C = capacity as f64 - 0.5 * weight.sum() as f64 - {
             let mut b = 0.;
             for i in 0..(f64::log2((capacity - 1) as f64) as usize) {
