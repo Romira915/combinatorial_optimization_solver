@@ -3,6 +3,7 @@ use std::{
     ops::{Mul, MulAssign},
 };
 
+use crate::math::DiagonalMatrix;
 use getset::Getters;
 use ndarray::{
     Array, Array1, Array2, ArrayBase, ArrayView1, ArrayViewMut1, ArrayViewMut2, FixedInitializer,
@@ -54,12 +55,23 @@ trait Model {
 impl From<QuboModel> for IsingModel {
     fn from(item: QuboModel) -> Self {
         let q = item.Q();
-        let J = q.clone() + q.t();
+        // 三角行列化して係数で除算
+        let q = (q.clone().into_triangular(UPLO::Upper)
+            + (q.clone().into_triangular(UPLO::Lower) - q.to_daigonal_matrix()).t())
+            / 4.;
+
+        let J = q.clone().into_triangular(UPLO::Upper) - q.to_daigonal_matrix();
         let h = {
             let mut h = Array1::zeros(q.dim().0);
             for k in 0..q.dim().0 {
-                h = h + q.column(k).to_owned() + q.row(k);
+                h = h + (q.column(k).to_owned() + q.row(k));
             }
+            // 以下と同義
+            // for i in 0..q.dim().0 {
+            //     h[i] += q.row(i).sum();
+            //     h[i] += q.column(i).sum();
+            // }
+
             h
         };
 
@@ -169,7 +181,9 @@ impl QuboModel {
     pub const BITS_FROM_SPINS: fn(&i8) -> i8 = |s| (s + 1) / 2;
 
     pub fn new(Q: Array2<f64>) -> Self {
-        let n = Q.dim().0;
+        // 三角行列に変換
+        let Q = Q.clone().into_triangular(UPLO::Upper)
+            + (Q.clone().into_triangular(UPLO::Lower) - Q.to_daigonal_matrix()).t();
         QuboModel { Q }
     }
 
@@ -193,11 +207,13 @@ impl QuboModel {
         Self::init_dim1_spins(N, &Self::CHOICE_ITEMS, rng)
     }
 
-    pub fn calculate_energy(&self, spins: &Array1<i8>) -> f64 {
+    pub fn calculate_energy(&self, spins: ArrayView1<i8>) -> f64 {
         let mut e = 0.;
         for i in 0..self.Q().dim().0 {
             for j in 0..self.Q().dim().1 {
-                e += self.Q()[[i, j]] * (spins[i] * spins[j]) as f64;
+                if i <= j {
+                    e += self.Q()[[i, j]] * (spins[i] * spins[j]) as f64;
+                }
             }
         }
 

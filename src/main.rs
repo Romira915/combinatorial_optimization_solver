@@ -1,5 +1,6 @@
 use core::num;
 use std::env;
+use std::process::exit;
 use std::sync::Arc;
 
 use combinatorial_optimization_solver::model::{clone_array_row_matrix, IsingModel, QuboModel};
@@ -147,6 +148,7 @@ fn knapsack_log_encode(
         let max_c = cost.iter().max().unwrap().to_owned() as f64;
         let B = 1.;
         let A = max_c * B * 10.;
+        let A = 1.;
         let C = capacity as f64 - 0.5 * weight.sum() as f64 - {
             let mut b = 0.;
             for i in 0..(f64::log2((capacity - 1) as f64) as usize) {
@@ -202,7 +204,8 @@ fn knapsack_log_encode(
             }
         }
         println!("J {:#?}", J);
-
+        println!("h {:#?}", h);
+        exit(0);
         (J, h)
     };
 
