@@ -12,7 +12,7 @@ use combinatorial_optimization_solver::solver::{Solver, SolverVariant};
 use combinatorial_optimization_solver::webhook::Webhook;
 use ndarray::{array, s, Array1, Array2, ArrayBase, ArrayView, ArrayView1, Dim, OwnedRepr};
 use ndarray_linalg::Scalar;
-use num_traits::pow;
+use num_traits::{pow, Float};
 use rand::distributions::Uniform;
 use rand::prelude::StdRng;
 use rand::{Rng, SeedableRng};
@@ -196,6 +196,10 @@ fn knapsack_log_encode(
                 }
             }
         }
+
+        let q_max = Q.iter().fold(0. / 0., |m, v: &f64| v.max(m));
+        let q_min = Q.iter().fold(0. / 0., |m, v: &f64| v.min(m));
+        println!("Q {}", &Q);
         Q
     };
 
@@ -240,9 +244,9 @@ async fn main() {
 
     let steps = 3e4 as usize;
     let try_number_of_times = 30;
-    let range_param_start = 3.;
+    let range_param_start = 5.;
     let range_param_end = 1e-06;
-    let T = 1. / 5.;
+    let T = 0.1;
     let solvers = vec![
         SolverVariant::Sa(SimulatedAnnealing::new(
             range_param_start,
@@ -275,6 +279,15 @@ async fn main() {
             T,
             steps,
             8,
+            Arc::clone(&ising),
+            None,
+        )),
+        SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
+            range_param_start,
+            range_param_end,
+            T,
+            steps,
+            32,
             Arc::clone(&ising),
             None,
         )),
