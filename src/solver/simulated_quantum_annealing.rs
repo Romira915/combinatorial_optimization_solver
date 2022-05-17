@@ -173,17 +173,16 @@ impl Solver for SimulatedQuantumAnnealing {
                 //             + self.spins[[(k + 1) % self.P, flip_local_index]]))
                 //         as f64;
 
-                let B = self.T / 2. * (1.0 / (G / self.PT).tanh()).log(consts::E);
-                // let delta_trotter = 2.
-                //     * B
-                //     * (self.spins[[k, flip_local_index]]
-                //         * (self.spins[[(k + self.P - 1) % self.P, flip_local_index]]
-                //             + self.spins[[(k + 1) % self.P, flip_local_index]]))
-                //         as f64;
-                // let delta_E = self.model.calculate_dE(self.spins.row(k), flip_local_index) as f64;
+                let B = -self.T / 2. * (1.0 / (G / self.PT).tanh()).log(consts::E);
+                let delta_E = self.model.calculate_dE(self.spins.row(k), flip_local_index) as f64;
+                let delta_trotter = 2.
+                    * B
+                    * (self.spins[[k, flip_local_index]]
+                        * (self.spins[[(k + self.P - 1) % self.P, flip_local_index]]
+                            + self.spins[[(k + 1) % self.P, flip_local_index]]))
+                        as f64;
 
-                // let delta = delta_E + delta_trotter;
-                let delta = self.calculate_dE(k, flip_local_index, B);
+                let delta = delta_E + delta_trotter;
 
                 let p = f64::min(1., (-delta / self.T).exp());
                 if solver::probability_boolean(p, &mut self.rng) {
