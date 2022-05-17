@@ -166,7 +166,7 @@ fn knapsack_log_encode(
 
         for i in 0..n {
             for j in 0..n {
-                if i <= j {
+                if i < j {
                     J[[i, j]] += A as f64 / 4. * weight[i] as f64 * weight[j] as f64;
                 }
 
@@ -181,7 +181,7 @@ fn knapsack_log_encode(
             for j in n..(n + bin_n) {
                 let j_index = j - n;
 
-                if i <= j {
+                if i < j {
                     J[[i, j]] += 0.5 * weight[i] as f64 * pow(2., j_index);
                 }
 
@@ -194,7 +194,7 @@ fn knapsack_log_encode(
                 let i_index = i - n;
                 let j_index = j - n;
 
-                if i <= j {
+                if i < j {
                     J[[i, j]] += A as f64 / 4. * pow(2., i_index) * pow(2., j_index);
                 }
 
@@ -205,7 +205,6 @@ fn knapsack_log_encode(
         }
         println!("J {:#?}", J);
         println!("h {:#?}", h);
-        exit(0);
         (J, h)
     };
 
@@ -216,31 +215,6 @@ fn knapsack_log_encode(
 
     (ising, cost, weight)
 }
-
-// fn knapsack_energy(
-//     spins: ArrayView1<i8>,
-//     cost: Array1<f64>,
-//     weight: Array1<f64>,
-//     W: f64,
-//     Y: f64,
-// ) -> f64 {
-//     let max_c = {
-//         let cost = cost.map(|i| *i as i32);
-//         cost.iter().max().unwrap().to_owned()
-//     } as f64;
-
-//     let B = 40.;
-//     let A = max_c * B * 10.;
-
-//     let H_a = {
-//         let select_weight = {
-//             let mut s = 0.;
-//             for i in 0..weight.len() {
-//                 s += weight * spi
-//             }
-//         }
-//     }
-// }
 
 #[tokio::main]
 async fn main() {

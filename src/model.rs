@@ -155,7 +155,7 @@ impl IsingModel {
             dE *= -1.;
         }
 
-        -2. * dE
+        -2. * dE / spins.dim() as f64
     }
 
     pub fn accept_flip(mut spins: ArrayViewMut1<i8>, flip_spin: usize) {
