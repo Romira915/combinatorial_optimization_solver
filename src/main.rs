@@ -144,11 +144,11 @@ fn knapsack_log_encode(
     let cost = array![135, 139, 149, 150, 156, 163, 173, 184, 192, 201, 210, 214, 221, 229, 240];
     let weight = array![70, 73, 77, 80, 82, 87, 90, 94, 98, 106, 110, 113, 115, 118, 120,];
 
-    let (J, h) = {
+    let Q = {
         let max_c = cost.iter().max().unwrap().to_owned() as f64;
         let B = 1.;
-        let A = max_c * B * 10.;
-        let A = 1.;
+        let A = max_c * B * 2.;
+        // let A = 1.;
         let C = capacity as f64 - 0.5 * weight.sum() as f64 - {
             let mut b = 0.;
             for i in 0..(f64::log2((capacity - 1) as f64) as usize) {
@@ -161,18 +161,15 @@ fn knapsack_log_encode(
         println!("B: {}", B);
 
         let bin_n = (f64::log2((capacity - 1) as f64) + 1.) as usize;
-        let mut J = Array2::zeros((n + bin_n, n + bin_n));
-        let mut h = Array1::zeros(n + bin_n);
+        let mut Q = Array2::zeros((n + bin_n, n + bin_n));
 
         for i in 0..n {
             for j in 0..n {
-                if i < j {
-                    J[[i, j]] += A as f64 / 4. * weight[i] as f64 * weight[j] as f64;
-                }
+                Q[[i, j]] += A * (weight[i] * weight[j]) as f64;
 
                 if i == j {
-                    h[i] += -0.5 * B as f64 * cost[i] as f64;
-                    h[i] += -C * weight[i] as f64;
+                    Q[[i, i]] += -B * cost[i] as f64;
+                    Q[[i, i]] += A * -2. * (capacity * weight[i]) as f64;
                 }
             }
         }
@@ -181,9 +178,7 @@ fn knapsack_log_encode(
             for j in n..(n + bin_n) {
                 let j_index = j - n;
 
-                if i < j {
-                    J[[i, j]] += 0.5 * weight[i] as f64 * pow(2., j_index);
-                }
+                Q[[i, j]] += A * 2. * weight[i] as f64 * pow(2., j_index);
 
                 if i == j {}
             }
@@ -194,21 +189,18 @@ fn knapsack_log_encode(
                 let i_index = i - n;
                 let j_index = j - n;
 
-                if i < j {
-                    J[[i, j]] += A as f64 / 4. * pow(2., i_index) * pow(2., j_index);
-                }
+                Q[[i, j]] += A * pow::<f64>(2., i_index) * pow(2., j_index);
 
                 if i == j {
-                    h[i] += -C * pow(2., i_index);
+                    Q[[i, j]] += A * -2. * capacity as f64 * pow(2., i_index);
                 }
             }
         }
-        println!("J {:#?}", J);
-        println!("h {:#?}", h);
-        (J, h)
+        Q
     };
 
-    let ising = IsingModel::new(J, h);
+    let qubo = QuboModel::new(Q);
+    let ising = IsingModel::from(qubo);
     let ising = Arc::new(ising);
     let cost = cost.map(|i| *i as f64);
     let weight = weight.map(|i| *i as f64);
