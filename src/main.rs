@@ -3,6 +3,7 @@ use std::env;
 use std::process::exit;
 use std::sync::Arc;
 
+use combinatorial_optimization_solver::dataset::{load_knapsack, KnapsackData};
 use combinatorial_optimization_solver::model::{clone_array_row_matrix, IsingModel, QuboModel};
 use combinatorial_optimization_solver::opt::TspNode;
 use combinatorial_optimization_solver::solver::annealing_scheduler::AnnealingScheduler;
@@ -127,41 +128,30 @@ fn knapsack(
     (ising, cost, weight)
 }
 
-fn knapsack_log_encode(
-    n: usize,
-    capacity: usize,
-    rng: &mut StdRng,
-) -> (Arc<IsingModel>, Array1<f64>, Array1<f64>) {
-    let cost = rng
-        .sample_iter(Uniform::new(1, 50))
-        .take(n)
-        .collect::<Array1<usize>>();
-    let weight = rng
-        .sample_iter(Uniform::new(0, (capacity as f64 * 0.8) as usize))
-        .take(n)
-        .collect::<Array1<usize>>();
+async fn knapsack_log_encode(data: &KnapsackData) -> Arc<IsingModel> {
+    let n = data.answer_labels().dim();
 
-    let cost = array![135, 139, 149, 150, 156, 163, 173, 184, 192, 201, 210, 214, 221, 229, 240];
-    let weight = array![70, 73, 77, 80, 82, 87, 90, 94, 98, 106, 110, 113, 115, 118, 120,];
+    // let cost = array![135, 139, 149, 150, 156, 163, 173, 184, 192, 201, 210, 214, 221, 229, 240];
+    // let weight = array![70, 73, 77, 80, 82, 87, 90, 94, 98, 106, 110, 113, 115, 118, 120,];
 
     let Q = {
-        let max_c = cost.iter().max().unwrap().to_owned() as f64;
+        let max_c = data.costs().iter().max().unwrap().to_owned() as f64;
         let B = 1.;
         let A = max_c * B * 2.;
 
         println!("A: {}", A);
         println!("B: {}", B);
 
-        let bin_n = (f64::log2((capacity - 1) as f64) + 1.) as usize;
+        let bin_n = (f64::log2((data.capacity() - 1) as f64) + 1.) as usize;
         let mut Q = Array2::zeros((n + bin_n, n + bin_n));
 
         for i in 0..n {
             for j in 0..n {
-                Q[[i, j]] += A * (weight[i] * weight[j]) as f64;
+                Q[[i, j]] += A * (data.weights()[i] * data.weights()[j]) as f64;
 
                 if i == j {
-                    Q[[i, i]] += -B * cost[i] as f64;
-                    Q[[i, i]] += A * -2. * (capacity * weight[i]) as f64;
+                    Q[[i, i]] += -B * data.costs()[i] as f64;
+                    Q[[i, i]] += A * -2. * (data.capacity() * data.weights()[i]) as f64;
                 }
             }
         }
@@ -170,7 +160,7 @@ fn knapsack_log_encode(
             for j in n..(n + bin_n) {
                 let j_index = j - n;
 
-                Q[[i, j]] += A * 2. * weight[i] as f64 * pow(2., j_index);
+                Q[[i, j]] += A * 2. * data.weights()[i] as f64 * pow(2., j_index);
 
                 if i == j {}
             }
@@ -184,7 +174,7 @@ fn knapsack_log_encode(
                 Q[[i, j]] += A * pow::<f64>(2., i_index) * pow(2., j_index);
 
                 if i == j {
-                    Q[[i, j]] += A * -2. * capacity as f64 * pow(2., i_index);
+                    Q[[i, j]] += A * -2. * *data.capacity() as f64 * pow(2., i_index);
                 }
             }
         }
@@ -198,10 +188,8 @@ fn knapsack_log_encode(
     let qubo = QuboModel::new(Q);
     let ising = IsingModel::from(qubo);
     let ising = Arc::new(ising);
-    let cost = cost.map(|i| *i as f64);
-    let weight = weight.map(|i| *i as f64);
 
-    (ising, cost, weight)
+    ising
 }
 
 #[tokio::main]
@@ -212,15 +200,14 @@ async fn main() {
     let mut rng = rand::rngs::StdRng::from_rng(rand::thread_rng()).unwrap();
 
     // let (tsp, ising, max_dist, bias) = tsp_ising(&mut rng);
-    let n = 15;
-    let capacity = 750;
-    let opt = array![1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1];
-    let opt = opt.map(|i| i.to_owned() as f64);
-    let (ising, cost, weight) = knapsack_log_encode(n, capacity, &mut rng);
-    let y_num = ising.h().len() - n;
+    let datas = load_knapsack("dataset/knapsack/smallcoeff_pisinger/knapPI_1_100_1000.csv")
+        .await
+        .unwrap();
+    let data = &datas[0];
+    let ising = knapsack_log_encode(&data).await;
+    let y_num = ising.h().len() - data.n();
 
-    let opt_weight = opt.dot(&weight) as usize;
-    let opt_weight_bin = format!("{:b}", opt_weight);
+    let opt_weight_bin = format!("{:b}", data.optimum_solution());
     let opt_weight_bin = {
         let mut vec = Vec::new();
         let mut iter = opt_weight_bin.chars().rev();
@@ -231,8 +218,6 @@ async fn main() {
 
         vec
     };
-    println!("cost {}", cost);
-    println!("weight {}", weight);
 
     let steps = 3e4 as usize;
     let try_number_of_times = 30;
@@ -301,53 +286,55 @@ async fn main() {
             //     Ok(len) => len.to_string(),
             //     Err((len, message)) => format!("{} ({})", len, &message),
             // };
+
+            let costs = data.costs().map(|c| *c as f64);
+            let weights = data.weights().map(|w| *w as f64);
+
             let best_spins = Array1::from_iter(ar.best_state.iter().map(|s| s.to_owned() as f64));
-            let best_state = best_spins.slice(s![0..n]);
-            let best_bin = best_spins.slice(s![n..best_spins.len()]);
-            let best_cost = best_state.dot(&cost);
-            let best_weight = best_state.dot(&weight);
-            let best_hamming = {
-                let mut d = 0.;
-                for i in 0..n {
-                    d += (best_state[i] as f64 - opt[i]).abs();
-                }
-                d / n as f64
-            };
+            let best_state = best_spins.slice(s![0..*data.n()]);
+            let best_bin = best_spins.slice(s![*data.n()..best_spins.len()]);
+            let best_cost = best_state.dot(&costs);
+            let best_weight = best_state.dot(&weights);
+            // let best_hamming = {
+            //     let mut d = 0.;
+            //     for i in 0..*data.n() {
+            //         d += (best_state[i] as f64 - opt[i]).abs();
+            //     }
+            //     d / n as f64
+            // };
 
             let worst_spins = Array1::from_iter(ar.worst_state.iter().map(|s| s.to_owned() as f64));
-            let worst_state = worst_spins.slice(s![0..n]);
-            let worst_bin = worst_spins.slice(s![n..worst_spins.len()]);
-            let worst_cost = worst_state.dot(&cost);
-            let worst_weight = worst_state.dot(&weight);
-            let worst_hamming = {
-                let mut d = 0.;
-                for i in 0..y_num {
-                    d += (worst_state[i] as f64 - opt[i]).abs();
-                }
-                d / n as f64
-            };
+            let worst_state = worst_spins.slice(s![0..*data.n()]);
+            let worst_bin = worst_spins.slice(s![*data.n()..worst_spins.len()]);
+            let worst_cost = worst_state.dot(&costs);
+            let worst_weight = worst_state.dot(&weights);
+            // let worst_hamming = {
+            //     let mut d = 0.;
+            //     for i in 0..y_num {
+            //         d += (worst_state[i] as f64 - opt[i]).abs();
+            //     }
+            //     d / n as f64
+            // };
 
             let mut cost_list = Vec::new();
             let mut weight_list = Vec::new();
             for state in &ar.states {
                 let state = Array1::from_iter(state.bits.iter().map(|s| s.to_owned() as f64));
-                let state = state.slice(s![0..n]);
+                let state = state.slice(s![0..*data.n()]);
 
-                cost_list.push(state.dot(&cost));
-                weight_list.push(state.dot(&weight));
+                cost_list.push(state.dot(&costs));
+                weight_list.push(state.dot(&weights));
             }
 
             fields.push((
                 format!("{}\nparameter {}", ar.solver_name, ar.parameter),
                 format!(
-                    "[best E {} hamming {} cost {} weight {}; ave {}; worst E {} hamming {} cost {} weight {}; \nbits {}\ncost {:?}\nweight {:?}",
+                    "[best E {} cost {} weight {}; ave {}; worst E {} cost {} weight {}; \nbits {}\ncost {:?}\nweight {:?}",
                     ar.best_energy,
-                    best_hamming,
                     best_cost,
                     best_weight,
                     ar.average_energy,
                     ar.worst_energy,
-                    worst_hamming,
                     worst_cost,
                     worst_weight,
                     // best_state,
@@ -359,11 +346,16 @@ async fn main() {
             ));
             println!("{:?}", &fields);
         }
-        let optimal_solution = opt.dot(&cost);
+
         e.title("Result")
             .description(format!(
                 "try_number_of_times {}; n {}; y_num {} capacity {}; 最適解 {}; 実行時間 {:?}",
-                &try_number_of_times, &n, &y_num, &capacity, &optimal_solution, end
+                &try_number_of_times,
+                &data.n(),
+                &y_num,
+                &data.capacity(),
+                &data.optimum_solution(),
+                end
             ))
             .fields(fields)
     });
