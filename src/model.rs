@@ -1,8 +1,9 @@
 use std::{
     iter::Sum,
-    ops::{Mul, MulAssign},
+    ops::{Add, Mul, MulAssign},
 };
 
+use crate::math::DiagonalMatrix;
 use getset::Getters;
 use ndarray::{
     Array, Array1, Array2, ArrayBase, ArrayView1, ArrayViewMut1, ArrayViewMut2, FixedInitializer,
@@ -54,16 +55,27 @@ trait Model {
 impl From<QuboModel> for IsingModel {
     fn from(item: QuboModel) -> Self {
         let q = item.Q();
-        let J = q.clone() + q.t();
+        // 三角行列化して係数で除算
+        let q = (q.clone().into_triangular(UPLO::Upper)
+            + (q.clone().into_triangular(UPLO::Lower) - q.to_daigonal_matrix()).t())
+            / 4.;
+
+        let J = q.clone().into_triangular(UPLO::Upper) - q.to_daigonal_matrix();
         let h = {
             let mut h = Array1::zeros(q.dim().0);
             for k in 0..q.dim().0 {
-                h = h + q.column(k).to_owned() + q.row(k);
+                h = h + (q.column(k).to_owned() + q.row(k));
             }
+            // 以下と同義
+            // for i in 0..q.dim().0 {
+            //     h[i] += q.row(i).sum();
+            //     h[i] += q.column(i).sum();
+            // }
+
             h
         };
 
-        IsingModel { J, h }
+        IsingModel::new(J, h)
     }
 }
 
@@ -71,8 +83,12 @@ impl IsingModel {
     const CHOICE_ITEMS: [(i8, usize); 2] = [(1, 1), (-1, 1)];
     pub const SPINS_FROM_BITS: fn(&i8) -> i8 = |q| 2 * q - 1;
 
-    pub fn new(J: Array2<f64>, h: Array1<f64>) -> Self {
-        let n = J.dim().0;
+    pub fn new(mut J: Array2<f64>, mut h: Array1<f64>) -> Self {
+        h = h + J.diag();
+
+        J = &J - J.to_daigonal_matrix();
+        J = J.clone().into_triangular(UPLO::Upper) + J.into_triangular(UPLO::Lower).t();
+
         IsingModel { J, h }
     }
 
@@ -110,7 +126,9 @@ impl IsingModel {
         let mut e = 0.;
         for i in 0..self.J().dim().0 {
             for j in 0..self.J().dim().1 {
-                e += self.J()[[i, j]] * (spins[i] * spins[j]) as f64;
+                if i < j {
+                    e += self.J()[[i, j]] * (spins[i] * spins[j]) as f64;
+                }
             }
         }
 
@@ -124,12 +142,10 @@ impl IsingModel {
     pub fn calculate_dE(&self, spins: ArrayView1<i8>, flip_spin: usize) -> f64 {
         let mut dE = self.h()[flip_spin];
 
-        dE += self
-            .J()
-            .row(flip_spin)
-            .indexed_iter()
-            .map(|(index, j)| j * spins[index] as f64)
-            .sum::<f64>();
+        for i in 0..spins.dim() {
+            dE += self.J[[i, flip_spin]] * spins[i] as f64;
+            dE += self.J[[flip_spin, i]] * spins[i] as f64;
+        }
 
         if spins[flip_spin] != 1 {
             dE *= -1.;
@@ -161,7 +177,9 @@ impl QuboModel {
     pub const BITS_FROM_SPINS: fn(&i8) -> i8 = |s| (s + 1) / 2;
 
     pub fn new(Q: Array2<f64>) -> Self {
-        let n = Q.dim().0;
+        // 三角行列に変換
+        let Q = Q.clone().into_triangular(UPLO::Upper)
+            + (Q.clone().into_triangular(UPLO::Lower) - Q.to_daigonal_matrix()).t();
         QuboModel { Q }
     }
 
@@ -185,11 +203,13 @@ impl QuboModel {
         Self::init_dim1_spins(N, &Self::CHOICE_ITEMS, rng)
     }
 
-    pub fn calculate_energy(&self, spins: &Array1<i8>) -> f64 {
+    pub fn calculate_energy(&self, spins: ArrayView1<i8>) -> f64 {
         let mut e = 0.;
         for i in 0..self.Q().dim().0 {
             for j in 0..self.Q().dim().1 {
-                e += self.Q()[[i, j]] * (spins[i] * spins[j]) as f64;
+                if i <= j {
+                    e += self.Q()[[i, j]] * (spins[i] * spins[j]) as f64;
+                }
             }
         }
 

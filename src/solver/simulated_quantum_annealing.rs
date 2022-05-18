@@ -1,4 +1,5 @@
-use ndarray::{Array, Array1, Array2};
+use ndarray::{array, Array, Array1, Array2};
+use ndarray_linalg::Scalar;
 use num_traits::Float;
 use rand::{prelude::StdRng, Rng, SeedableRng};
 use std::{f64::consts, sync::Arc};
@@ -95,6 +96,65 @@ impl SimulatedQuantumAnnealing {
 
         energy_list
     }
+
+    fn calculate_dE(
+        &mut self,
+        flip_trotter_index: usize,
+        flip_local_index: usize,
+        trotter_factor: f64,
+    ) -> f64 {
+        let (delta, delta_t) = {
+            let (before_energy, before_trotter_energy) = {
+                let mut b_e = 0.;
+                let mut b_q_e = 0.;
+                for i in 0..self.P {
+                    b_e += self.model.calculate_energy(self.spins.row(i));
+                }
+                b_e /= self.P as f64;
+
+                for i in 0..self.N {
+                    for k in 0..self.P {
+                        b_q_e += -trotter_factor
+                            * (self.spins[[k, i]] * self.spins[[(k + 1) % self.P, i]]) as f64;
+                    }
+                }
+
+                (b_e, b_q_e)
+            };
+
+            let (after_energy, after_trotter_energy) = {
+                let mut a_e = 0.;
+                let mut a_q_e = 0.;
+                let mut fix_spins = self.spins.view_mut();
+                fix_spins[[flip_trotter_index, flip_local_index]] =
+                    -1 * fix_spins[[flip_trotter_index, flip_local_index]];
+
+                for i in 0..self.P {
+                    a_e += self.model.calculate_energy(fix_spins.row(i));
+                }
+                a_e /= self.P as f64;
+
+                for i in 0..self.N {
+                    for k in 0..self.P {
+                        a_q_e += -trotter_factor
+                            * (fix_spins[[k, i]] * fix_spins[[(k + 1) % self.P, i]]) as f64;
+                    }
+                }
+
+                fix_spins[[flip_trotter_index, flip_local_index]] =
+                    -1 * fix_spins[[flip_trotter_index, flip_local_index]];
+
+                (a_e, a_q_e)
+            };
+
+            (
+                after_energy - before_energy,
+                after_trotter_energy - before_trotter_energy,
+            )
+        };
+
+        delta + delta_t
+    }
 }
 
 impl Solver for SimulatedQuantumAnnealing {
@@ -113,14 +173,18 @@ impl Solver for SimulatedQuantumAnnealing {
                 //             + self.spins[[(k + 1) % self.P, flip_local_index]]))
                 //         as f64;
 
-                let B = self.T * (1.0 / (G / self.PT).tanh()).log(consts::E);
-                let delta_trotter = B
+                let B = -self.T / 2. * (1.0 / (G / self.PT).tanh()).log(consts::E);
+                let delta_E = self.model.calculate_dE(self.spins.row(k), flip_local_index) as f64;
+                let delta_trotter = 2.
+                    * B
                     * (self.spins[[k, flip_local_index]]
                         * (self.spins[[(k + self.P - 1) % self.P, flip_local_index]]
                             + self.spins[[(k + 1) % self.P, flip_local_index]]))
                         as f64;
-                let delta_E = self.model.calculate_dE(self.spins.row(k), flip_local_index) as f64;
-                let p = f64::min(1., (-(delta_E + delta_trotter) / self.T).exp());
+
+                let delta = delta_E + delta_trotter;
+
+                let p = f64::min(1., (-delta / self.T).exp());
                 if solver::probability_boolean(p, &mut self.rng) {
                     IsingModel::accept_flip(self.spins.row_mut(k), flip_local_index);
                 }
@@ -164,6 +228,11 @@ impl Solver for SimulatedQuantumAnnealing {
             ),
         };
         self.record = Some(record.clone());
+
+        // let array = array![-1, 1, -1, -1, 1, 1, -1, 1, -1, -1, -1];
+        // let opt_e = self.model.calculate_energy(array.view());
+        // println!("opt E {}", opt_e);
+        // println!("今の {}", self.model.calculate_energy(self.spins.row(0)));
 
         record
     }

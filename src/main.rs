@@ -1,5 +1,6 @@
 use core::num;
 use std::env;
+use std::process::exit;
 use std::sync::Arc;
 
 use combinatorial_optimization_solver::model::{clone_array_row_matrix, IsingModel, QuboModel};
@@ -9,8 +10,9 @@ use combinatorial_optimization_solver::solver::simulated_annealing::SimulatedAnn
 use combinatorial_optimization_solver::solver::simulated_quantum_annealing::SimulatedQuantumAnnealing;
 use combinatorial_optimization_solver::solver::{Solver, SolverVariant};
 use combinatorial_optimization_solver::webhook::Webhook;
-use ndarray::{array, Array1, Array2, ArrayBase, ArrayView, ArrayView1, Dim, OwnedRepr};
+use ndarray::{array, s, Array1, Array2, ArrayBase, ArrayView, ArrayView1, Dim, OwnedRepr};
 use ndarray_linalg::Scalar;
+use num_traits::{pow, Float};
 use rand::distributions::Uniform;
 use rand::prelude::StdRng;
 use rand::{Rng, SeedableRng};
@@ -68,34 +70,46 @@ fn tsp_ising(rng: &mut StdRng) -> (TspNode, Arc<IsingModel>, f64, f64) {
     (tsp, ising, max_dist, bias)
 }
 
-fn knapsack(n: usize, capacity: u32, rng: &mut StdRng) -> Arc<IsingModel> {
-    let mut cost = rng
+fn knapsack(
+    n: usize,
+    capacity: usize,
+    rng: &mut StdRng,
+) -> (Arc<IsingModel>, Array1<f64>, Array1<f64>) {
+    let cost = rng
         .sample_iter(Uniform::new(1, 10000))
         .take(n)
-        .collect::<Vec<u32>>();
+        .collect::<Array1<u32>>();
     let mut weight = rng
-        .sample_iter(Uniform::new(50, 5000))
+        .sample_iter(Uniform::new(0, (capacity as f64 * 1.3) as u32))
         .take(n)
-        .collect::<Vec<u32>>();
+        .collect::<Array1<u32>>();
+    let cost = array![
+        94, 506, 416, 992, 649, 237, 457, 815, 446, 422, 791, 359, 667, 598, 7, 544, 334, 766, 994,
+        893, 633, 131, 428, 700, 617, 874, 720, 419, 794, 196, 997, 116, 908, 539, 707, 569, 537,
+        931, 726, 487, 772, 513, 81, 943, 58, 303, 764, 536, 724, 789,
+    ];
+    let weight = array![
+        485, 326, 248, 421, 322, 795, 43, 845, 955, 252, 9, 901, 122, 94, 738, 574, 715, 882, 367,
+        984, 299, 433, 682, 72, 874, 138, 856, 145, 995, 529, 199, 277, 97, 719, 242, 107, 122, 70,
+        98, 600, 645, 267, 972, 895, 213, 748, 487, 923, 29, 674,
+    ];
 
     let max_c = cost.iter().max().unwrap().to_owned();
 
-    let cost_and_weight = cost
-        .into_iter()
-        .zip(weight.into_iter())
-        .collect::<Vec<(u32, u32)>>();
-
     let Q = {
         let mut Q = Array2::zeros((n, n));
-        let A = max_c as f64 * 1.1;
+        let B = 40.;
+        let A = 10. * B * max_c as f64;
+        println!("A: {}", A);
+        println!("B: {}", B);
 
         for i in 0..n {
             for j in 0..n {
-                Q[[i, j]] += cost_and_weight[i].1 as f64 * cost_and_weight[j].1 as f64;
+                Q[[i, j]] += weight[i] as f64 * weight[i] as f64;
 
                 if i == j {
-                    Q[[i, j]] += -2. * A * capacity as f64 * cost_and_weight[i].1 as f64;
-                    Q[[i, j]] += -2. * cost_and_weight[i].0 as f64;
+                    Q[[i, j]] += -2. * A * capacity as f64 * weight[i] as f64;
+                    Q[[i, j]] += -B * cost[i] as f64;
                 }
             }
         }
@@ -104,10 +118,90 @@ fn knapsack(n: usize, capacity: u32, rng: &mut StdRng) -> Arc<IsingModel> {
     };
 
     let qubo = QuboModel::new(Q);
+    println!("{:#?}", qubo);
     let ising = IsingModel::from(qubo);
     let ising = Arc::new(ising);
+    let cost = cost.map(|i| *i as f64);
+    let weight = weight.map(|i| *i as f64);
 
-    ising
+    (ising, cost, weight)
+}
+
+fn knapsack_log_encode(
+    n: usize,
+    capacity: usize,
+    rng: &mut StdRng,
+) -> (Arc<IsingModel>, Array1<f64>, Array1<f64>) {
+    let cost = rng
+        .sample_iter(Uniform::new(1, 50))
+        .take(n)
+        .collect::<Array1<usize>>();
+    let weight = rng
+        .sample_iter(Uniform::new(0, (capacity as f64 * 0.8) as usize))
+        .take(n)
+        .collect::<Array1<usize>>();
+
+    let cost = array![135, 139, 149, 150, 156, 163, 173, 184, 192, 201, 210, 214, 221, 229, 240];
+    let weight = array![70, 73, 77, 80, 82, 87, 90, 94, 98, 106, 110, 113, 115, 118, 120,];
+
+    let Q = {
+        let max_c = cost.iter().max().unwrap().to_owned() as f64;
+        let B = 1.;
+        let A = max_c * B * 2.;
+
+        println!("A: {}", A);
+        println!("B: {}", B);
+
+        let bin_n = (f64::log2((capacity - 1) as f64) + 1.) as usize;
+        let mut Q = Array2::zeros((n + bin_n, n + bin_n));
+
+        for i in 0..n {
+            for j in 0..n {
+                Q[[i, j]] += A * (weight[i] * weight[j]) as f64;
+
+                if i == j {
+                    Q[[i, i]] += -B * cost[i] as f64;
+                    Q[[i, i]] += A * -2. * (capacity * weight[i]) as f64;
+                }
+            }
+        }
+
+        for i in 0..n {
+            for j in n..(n + bin_n) {
+                let j_index = j - n;
+
+                Q[[i, j]] += A * 2. * weight[i] as f64 * pow(2., j_index);
+
+                if i == j {}
+            }
+        }
+
+        for i in n..(n + bin_n) {
+            for j in n..(n + bin_n) {
+                let i_index = i - n;
+                let j_index = j - n;
+
+                Q[[i, j]] += A * pow::<f64>(2., i_index) * pow(2., j_index);
+
+                if i == j {
+                    Q[[i, j]] += A * -2. * capacity as f64 * pow(2., i_index);
+                }
+            }
+        }
+
+        let q_max = Q.iter().fold(0. / 0., |m, v: &f64| v.max(m));
+        let q_min = Q.iter().fold(0. / 0., |m, v: &f64| v.min(m));
+        println!("Q {}", &Q);
+        Q
+    };
+
+    let qubo = QuboModel::new(Q);
+    let ising = IsingModel::from(qubo);
+    let ising = Arc::new(ising);
+    let cost = cost.map(|i| *i as f64);
+    let weight = weight.map(|i| *i as f64);
+
+    (ising, cost, weight)
 }
 
 #[tokio::main]
@@ -118,14 +212,33 @@ async fn main() {
     let mut rng = rand::rngs::StdRng::from_rng(rand::thread_rng()).unwrap();
 
     // let (tsp, ising, max_dist, bias) = tsp_ising(&mut rng);
-    let n = 1000;
-    let rate = 0.5;
-    let (numbers, m, ising, constant) = number_partitioning(n, rate, &mut rng);
+    let n = 15;
+    let capacity = 750;
+    let opt = array![1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1];
+    let opt = opt.map(|i| i.to_owned() as f64);
+    let (ising, cost, weight) = knapsack_log_encode(n, capacity, &mut rng);
+    let y_num = ising.h().len() - n;
 
-    let steps = 3e5 as usize;
+    let opt_weight = opt.dot(&weight) as usize;
+    let opt_weight_bin = format!("{:b}", opt_weight);
+    let opt_weight_bin = {
+        let mut vec = Vec::new();
+        let mut iter = opt_weight_bin.chars().rev();
+        for i in 0..y_num {
+            let n = iter.next().unwrap().to_digit(10).unwrap();
+            vec.push(n);
+        }
+
+        vec
+    };
+    println!("cost {}", cost);
+    println!("weight {}", weight);
+
+    let steps = 3e4 as usize;
     let try_number_of_times = 30;
-    let range_param_start = 1.;
+    let range_param_start = 5.;
     let range_param_end = 1e-06;
+    let T = 0.1;
     let solvers = vec![
         SolverVariant::Sa(SimulatedAnnealing::new(
             range_param_start,
@@ -137,7 +250,7 @@ async fn main() {
         SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
             range_param_start,
             range_param_end,
-            1. / 1.,
+            T,
             steps,
             1,
             Arc::clone(&ising),
@@ -146,54 +259,27 @@ async fn main() {
         SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
             range_param_start,
             range_param_end,
-            1. / 40.,
+            T,
             steps,
-            40,
+            4,
             Arc::clone(&ising),
             None,
         )),
         SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
             range_param_start,
             range_param_end,
-            1. / 80.,
+            T,
             steps,
-            80,
+            8,
             Arc::clone(&ising),
             None,
         )),
         SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
             range_param_start,
             range_param_end,
-            1. / 160.,
+            T,
             steps,
-            160,
-            Arc::clone(&ising),
-            None,
-        )),
-        SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
-            range_param_start,
-            range_param_end,
-            1. / 320.,
-            steps,
-            320,
-            Arc::clone(&ising),
-            None,
-        )),
-        SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
-            range_param_start,
-            range_param_end,
-            1. / 640.,
-            steps,
-            640,
-            Arc::clone(&ising),
-            None,
-        )),
-        SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
-            range_param_start,
-            range_param_end,
-            1. / 1280.,
-            steps,
-            1280,
+            32,
             Arc::clone(&ising),
             None,
         )),
@@ -215,32 +301,69 @@ async fn main() {
             //     Ok(len) => len.to_string(),
             //     Err((len, message)) => format!("{} ({})", len, &message),
             // };
-            let best_state = Array1::from_iter(ar.best_state.iter().map(|s| s.to_owned() as f64));
-            let best_cost = (best_state.dot(&numbers) - m).pow(2.);
+            let best_spins = Array1::from_iter(ar.best_state.iter().map(|s| s.to_owned() as f64));
+            let best_state = best_spins.slice(s![0..n]);
+            let best_bin = best_spins.slice(s![n..best_spins.len()]);
+            let best_cost = best_state.dot(&cost);
+            let best_weight = best_state.dot(&weight);
+            let best_hamming = {
+                let mut d = 0.;
+                for i in 0..n {
+                    d += (best_state[i] as f64 - opt[i]).abs();
+                }
+                d / n as f64
+            };
 
-            let worst_state = Array1::from_iter(ar.worst_state.iter().map(|s| s.to_owned() as f64));
-            let worst_cost = (worst_state.dot(&numbers) - m).pow(2.);
+            let worst_spins = Array1::from_iter(ar.worst_state.iter().map(|s| s.to_owned() as f64));
+            let worst_state = worst_spins.slice(s![0..n]);
+            let worst_bin = worst_spins.slice(s![n..worst_spins.len()]);
+            let worst_cost = worst_state.dot(&cost);
+            let worst_weight = worst_state.dot(&weight);
+            let worst_hamming = {
+                let mut d = 0.;
+                for i in 0..y_num {
+                    d += (worst_state[i] as f64 - opt[i]).abs();
+                }
+                d / n as f64
+            };
+
+            let mut cost_list = Vec::new();
+            let mut weight_list = Vec::new();
+            for state in &ar.states {
+                let state = Array1::from_iter(state.bits.iter().map(|s| s.to_owned() as f64));
+                let state = state.slice(s![0..n]);
+
+                cost_list.push(state.dot(&cost));
+                weight_list.push(state.dot(&weight));
+            }
 
             fields.push((
                 format!("{}\nparameter {}", ar.solver_name, ar.parameter),
                 format!(
-                    "[best E {} cost {}; ave {}; worst E {} cost {}; \nbits {}\n",
+                    "[best E {} hamming {} cost {} weight {}; ave {}; worst E {} hamming {} cost {} weight {}; \nbits {}\ncost {:?}\nweight {:?}",
                     ar.best_energy,
+                    best_hamming,
                     best_cost,
+                    best_weight,
                     ar.average_energy,
                     ar.worst_energy,
+                    worst_hamming,
                     worst_cost,
+                    worst_weight,
                     // best_state,
                     "廃止",
+                    cost_list,
+                    weight_list
                 ),
                 false,
             ));
             println!("{:?}", &fields);
         }
+        let optimal_solution = opt.dot(&cost);
         e.title("Result")
             .description(format!(
-                "try_number_of_times {}; n {}; rate {}; m {}; constant {};  実行時間 {:?}",
-                &try_number_of_times, &n, &rate, &m, &constant, end
+                "try_number_of_times {}; n {}; y_num {} capacity {}; 最適解 {}; 実行時間 {:?}",
+                &try_number_of_times, &n, &y_num, &capacity, &optimal_solution, end
             ))
             .fields(fields)
     });
