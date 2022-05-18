@@ -1,5 +1,6 @@
 use core::num;
 use std::env;
+use std::process::exit;
 use std::sync::Arc;
 
 use combinatorial_optimization_solver::model::{clone_array_row_matrix, IsingModel, QuboModel};
@@ -11,7 +12,7 @@ use combinatorial_optimization_solver::solver::{Solver, SolverVariant};
 use combinatorial_optimization_solver::webhook::Webhook;
 use ndarray::{array, s, Array1, Array2, ArrayBase, ArrayView, ArrayView1, Dim, OwnedRepr};
 use ndarray_linalg::Scalar;
-use num_traits::pow;
+use num_traits::{pow, Float};
 use rand::distributions::Uniform;
 use rand::prelude::StdRng;
 use rand::{Rng, SeedableRng};
@@ -140,40 +141,27 @@ fn knapsack_log_encode(
         .take(n)
         .collect::<Array1<usize>>();
 
-    let cost = array![70, 20, 39, 37, 7, 5, 10];
-    let weight = array![31, 10, 20, 19, 4, 3, 6];
+    let cost = array![135, 139, 149, 150, 156, 163, 173, 184, 192, 201, 210, 214, 221, 229, 240];
+    let weight = array![70, 73, 77, 80, 82, 87, 90, 94, 98, 106, 110, 113, 115, 118, 120,];
 
-    let (J, h) = {
+    let Q = {
         let max_c = cost.iter().max().unwrap().to_owned() as f64;
         let B = 1.;
-        let A = B * max_c + 0.25;
-        let y_sum = {
-            let mut b = 0.;
-            for i in 0..(f64::log2((capacity - 1) as f64) as usize) {
-                b += pow(2., i);
-            }
+        let A = max_c * B * 2.;
 
-            b
-        };
-        let C = capacity as f64 - 0.5 * weight.sum() as f64 - 0.5 * y_sum;
         println!("A: {}", A);
         println!("B: {}", B);
 
         let bin_n = (f64::log2((capacity - 1) as f64) + 1.) as usize;
-        let mut J = Array2::zeros((n + bin_n, n + bin_n));
-        let mut h = Array1::zeros(n + bin_n);
+        let mut Q = Array2::zeros((n + bin_n, n + bin_n));
 
         for i in 0..n {
             for j in 0..n {
-                if i < j {
-                    J[[i, j]] += A / 4. * (weight[i] * weight[j]) as f64;
-                }
+                Q[[i, j]] += A * (weight[i] * weight[j]) as f64;
 
                 if i == j {
-                    h[i] += -B / 2. * cost[i] as f64;
-                    h[i] += A / 2. * (weight.sum() * weight[i]) as f64;
-                    h[i] += A * -1. * capacity as f64 * weight[i] as f64;
-                    h[i] += A / 2. * y_sum * weight[i] as f64;
+                    Q[[i, i]] += -B * cost[i] as f64;
+                    Q[[i, i]] += A * -2. * (capacity * weight[i]) as f64;
                 }
             }
         }
@@ -182,9 +170,7 @@ fn knapsack_log_encode(
             for j in n..(n + bin_n) {
                 let j_index = j - n;
 
-                if i < j {
-                    J[[i, j]] += A / 2. * weight[i] as f64 * pow(2., j_index);
-                }
+                Q[[i, j]] += A * 2. * weight[i] as f64 * pow(2., j_index);
 
                 if i == j {}
             }
@@ -195,54 +181,28 @@ fn knapsack_log_encode(
                 let i_index = i - n;
                 let j_index = j - n;
 
-                if i < j {
-                    J[[i, j]] += A / 4. * (pow(2., i_index) * pow(2., j_index));
-                }
+                Q[[i, j]] += A * pow::<f64>(2., i_index) * pow(2., j_index);
 
                 if i == j {
-                    h[i] += A / 2. * (y_sum * pow(2., i_index));
-                    h[i] += A / 2. * (weight.sum() as f64 * pow(2., i_index));
-                    h[i] += -A * capacity as f64 * pow(2., i_index);
+                    Q[[i, j]] += A * -2. * capacity as f64 * pow(2., i_index);
                 }
             }
         }
-        println!("J {:#?}", J);
 
-        (J, h)
+        let q_max = Q.iter().fold(0. / 0., |m, v: &f64| v.max(m));
+        let q_min = Q.iter().fold(0. / 0., |m, v: &f64| v.min(m));
+        println!("Q {}", &Q);
+        Q
     };
 
-    let ising = IsingModel::new(J, h);
+    let qubo = QuboModel::new(Q);
+    let ising = IsingModel::from(qubo);
     let ising = Arc::new(ising);
     let cost = cost.map(|i| *i as f64);
     let weight = weight.map(|i| *i as f64);
 
     (ising, cost, weight)
 }
-
-// fn knapsack_energy(
-//     spins: ArrayView1<i8>,
-//     cost: Array1<f64>,
-//     weight: Array1<f64>,
-//     W: f64,
-//     Y: f64,
-// ) -> f64 {
-//     let max_c = {
-//         let cost = cost.map(|i| *i as i32);
-//         cost.iter().max().unwrap().to_owned()
-//     } as f64;
-
-//     let B = 40.;
-//     let A = max_c * B * 10.;
-
-//     let H_a = {
-//         let select_weight = {
-//             let mut s = 0.;
-//             for i in 0..weight.len() {
-//                 s += weight * spi
-//             }
-//         }
-//     }
-// }
 
 #[tokio::main]
 async fn main() {
@@ -252,20 +212,33 @@ async fn main() {
     let mut rng = rand::rngs::StdRng::from_rng(rand::thread_rng()).unwrap();
 
     // let (tsp, ising, max_dist, bias) = tsp_ising(&mut rng);
-    let n = 7;
-    let capacity = 50;
-    let opt = array![1, 0, 0, 1, 0, 0, 0];
-
+    let n = 15;
+    let capacity = 750;
+    let opt = array![1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1];
+    let opt = opt.map(|i| i.to_owned() as f64);
     let (ising, cost, weight) = knapsack_log_encode(n, capacity, &mut rng);
+    let y_num = ising.h().len() - n;
 
+    let opt_weight = opt.dot(&weight) as usize;
+    let opt_weight_bin = format!("{:b}", opt_weight);
+    let opt_weight_bin = {
+        let mut vec = Vec::new();
+        let mut iter = opt_weight_bin.chars().rev();
+        for i in 0..y_num {
+            let n = iter.next().unwrap().to_digit(10).unwrap();
+            vec.push(n);
+        }
+
+        vec
+    };
     println!("cost {}", cost);
     println!("weight {}", weight);
 
     let steps = 3e4 as usize;
     let try_number_of_times = 30;
-    let range_param_start = 3.;
+    let range_param_start = 5.;
     let range_param_end = 1e-06;
-    let T = 1. / 5.;
+    let T = 0.1;
     let solvers = vec![
         SolverVariant::Sa(SimulatedAnnealing::new(
             range_param_start,
@@ -301,24 +274,15 @@ async fn main() {
             Arc::clone(&ising),
             None,
         )),
-        // SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
-        //     range_param_start,
-        //     range_param_end,
-        //     T,
-        //     steps,
-        //     40,
-        //     Arc::clone(&ising),
-        //     None,
-        // )),
-        // SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
-        //     range_param_start,
-        //     range_param_end,
-        //     T,
-        //     steps,
-        //     80,
-        //     Arc::clone(&ising),
-        //     None,
-        // )),
+        SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
+            range_param_start,
+            range_param_end,
+            T,
+            steps,
+            32,
+            Arc::clone(&ising),
+            None,
+        )),
     ];
 
     let scheduler = AnnealingScheduler::new(solvers, try_number_of_times);
@@ -337,15 +301,31 @@ async fn main() {
             //     Ok(len) => len.to_string(),
             //     Err((len, message)) => format!("{} ({})", len, &message),
             // };
-            let best_state = Array1::from_iter(ar.best_state.iter().map(|s| s.to_owned() as f64));
-            let best_state = best_state.slice(s![0..n]);
+            let best_spins = Array1::from_iter(ar.best_state.iter().map(|s| s.to_owned() as f64));
+            let best_state = best_spins.slice(s![0..n]);
+            let best_bin = best_spins.slice(s![n..best_spins.len()]);
             let best_cost = best_state.dot(&cost);
             let best_weight = best_state.dot(&weight);
+            let best_hamming = {
+                let mut d = 0.;
+                for i in 0..n {
+                    d += (best_state[i] as f64 - opt[i]).abs();
+                }
+                d / n as f64
+            };
 
-            let worst_state = Array1::from_iter(ar.worst_state.iter().map(|s| s.to_owned() as f64));
-            let worst_state = worst_state.slice(s![0..n]);
+            let worst_spins = Array1::from_iter(ar.worst_state.iter().map(|s| s.to_owned() as f64));
+            let worst_state = worst_spins.slice(s![0..n]);
+            let worst_bin = worst_spins.slice(s![n..worst_spins.len()]);
             let worst_cost = worst_state.dot(&cost);
             let worst_weight = worst_state.dot(&weight);
+            let worst_hamming = {
+                let mut d = 0.;
+                for i in 0..y_num {
+                    d += (worst_state[i] as f64 - opt[i]).abs();
+                }
+                d / n as f64
+            };
 
             let mut cost_list = Vec::new();
             let mut weight_list = Vec::new();
@@ -360,12 +340,14 @@ async fn main() {
             fields.push((
                 format!("{}\nparameter {}", ar.solver_name, ar.parameter),
                 format!(
-                    "[best E {} cost {} weight {}; ave {}; worst E {} cost {} weight {}; \nbits {}\ncost {:?}\nweight {:?}",
+                    "[best E {} hamming {} cost {} weight {}; ave {}; worst E {} hamming {} cost {} weight {}; \nbits {}\ncost {:?}\nweight {:?}",
                     ar.best_energy,
+                    best_hamming,
                     best_cost,
                     best_weight,
                     ar.average_energy,
                     ar.worst_energy,
+                    worst_hamming,
                     worst_cost,
                     worst_weight,
                     // best_state,
@@ -377,12 +359,11 @@ async fn main() {
             ));
             println!("{:?}", &fields);
         }
-        let opt = opt.map(|i| i.to_owned() as f64);
         let optimal_solution = opt.dot(&cost);
         e.title("Result")
             .description(format!(
-                "try_number_of_times {}; n {}; capacity {}; 最適解 {}; 実行時間 {:?}",
-                &try_number_of_times, &n, &capacity, &optimal_solution, end
+                "try_number_of_times {}; n {}; y_num {} capacity {}; 最適解 {}; 実行時間 {:?}",
+                &try_number_of_times, &n, &y_num, &capacity, &optimal_solution, end
             ))
             .fields(fields)
     });
