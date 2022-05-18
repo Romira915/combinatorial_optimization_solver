@@ -137,7 +137,7 @@ async fn knapsack_log_encode(data: &KnapsackData) -> Arc<IsingModel> {
     let Q = {
         let max_c = data.costs().iter().max().unwrap().to_owned() as f64;
         let B = 1.;
-        let A = max_c * B * 1.2;
+        let A = max_c * B * 2.;
 
         println!("A: {}", A);
         println!("B: {}", B);
@@ -200,10 +200,10 @@ async fn main() {
     let mut rng = rand::rngs::StdRng::from_rng(rand::thread_rng()).unwrap();
 
     // let (tsp, ising, max_dist, bias) = tsp_ising(&mut rng);
-    let datas = load_knapsack("dataset/knapsack/smallcoeff_pisinger/knapPI_1_100_1000.csv")
+    let datas = load_knapsack("dataset/knapsack/smallcoeff_pisinger/knap_custom.csv")
         .await
         .unwrap();
-    let data = &datas[1];
+    let data = &datas[7];
     let ising = knapsack_log_encode(&data).await;
     let y_num = ising.h().len() - data.n();
 
@@ -219,8 +219,8 @@ async fn main() {
         vec
     };
 
-    let steps = 3e4 as usize;
-    let try_number_of_times = 30;
+    let steps = 3e3 as usize;
+    let try_number_of_times = 50;
     let range_param_start = 5.;
     let range_param_end = 1e-06;
     let T = 0.1;
@@ -265,6 +265,15 @@ async fn main() {
             T,
             steps,
             32,
+            Arc::clone(&ising),
+            None,
+        )),
+        SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
+            range_param_start,
+            range_param_end,
+            T,
+            steps,
+            256,
             Arc::clone(&ising),
             None,
         )),
@@ -339,8 +348,10 @@ async fn main() {
                     worst_weight,
                     // best_state,
                     "廃止",
-                    cost_list,
-                    weight_list
+                    // cost_list,
+                    "廃止",
+                    // weight_list
+                    "廃止"
                 ),
                 false,
             ));

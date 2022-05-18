@@ -109,7 +109,7 @@ where
 
     // input from column
     for _ in 0..n {
-        let data = lines.next_line().await?.unwrap();
+        let data = lines.next_line().await?.unwrap().replace(" ", "");
         let data = data.split(',').collect::<Vec<&str>>();
 
         costs.push(data[1].parse().unwrap());
