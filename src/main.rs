@@ -182,6 +182,8 @@ async fn knapsack_log_encode(data: &KnapsackData) -> Arc<IsingModel> {
         let q_max = Q.iter().fold(0. / 0., |m, v: &f64| v.max(m));
         let q_min = Q.iter().fold(0. / 0., |m, v: &f64| v.min(m));
         println!("Q {}", &Q);
+        println!("{} {}", q_max, q_min);
+
         Q
     };
 
@@ -204,6 +206,7 @@ async fn main() {
         .await
         .unwrap();
     let data = &datas[7];
+
     let ising = knapsack_log_encode(&data).await;
     let y_num = ising.h().len() - data.n();
 
@@ -219,11 +222,11 @@ async fn main() {
         vec
     };
 
-    let steps = 3e3 as usize;
+    let steps = 3e4 as usize;
     let try_number_of_times = 50;
     let range_param_start = 3.;
     let range_param_end = 1e-06;
-    let T = 0.1;
+    let T = 0.3;
     let solvers = vec![
         SolverVariant::Sa(SimulatedAnnealing::new(
             range_param_start,
@@ -265,15 +268,6 @@ async fn main() {
             T,
             steps,
             32,
-            Arc::clone(&ising),
-            None,
-        )),
-        SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
-            range_param_start,
-            range_param_end,
-            T,
-            steps,
-            256,
             Arc::clone(&ising),
             None,
         )),
