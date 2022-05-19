@@ -200,7 +200,7 @@ async fn main() {
     let mut rng = rand::rngs::StdRng::from_rng(rand::thread_rng()).unwrap();
 
     // let (tsp, ising, max_dist, bias) = tsp_ising(&mut rng);
-    let datas = load_knapsack("dataset/knapsack/smallcoeff_pisinger/knap_custom.csv")
+    let datas = load_knapsack("dataset/knapsack/knap_custom.csv")
         .await
         .unwrap();
     let data = &datas[7];
@@ -221,7 +221,7 @@ async fn main() {
 
     let steps = 3e3 as usize;
     let try_number_of_times = 50;
-    let range_param_start = 5.;
+    let range_param_start = 3.;
     let range_param_end = 1e-06;
     let T = 0.1;
     let solvers = vec![
