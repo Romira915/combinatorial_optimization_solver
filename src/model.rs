@@ -89,6 +89,10 @@ impl IsingModel {
         J = &J - J.to_daigonal_matrix();
         J = J.clone().into_triangular(UPLO::Upper) + J.into_triangular(UPLO::Lower).t();
 
+        let j_max = J.iter().fold(0. / 0., |m, v| v.abs().max(f64::abs(m)));
+        let h_max = h.iter().fold(0. / 0., |m, v| v.abs().max(f64::abs(m)));
+        let max = j_max.abs().max(h_max.abs());
+
         IsingModel { J, h }
     }
 

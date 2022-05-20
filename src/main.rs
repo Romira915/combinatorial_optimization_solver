@@ -137,7 +137,7 @@ async fn knapsack_log_encode(data: &KnapsackData) -> Arc<IsingModel> {
     let Q = {
         let max_c = data.costs().iter().max().unwrap().to_owned() as f64;
         let B = 1.;
-        let A = max_c * B * 2.;
+        let A = max_c * B * 5.;
 
         println!("A: {}", A);
         println!("B: {}", B);
@@ -205,7 +205,7 @@ async fn main() {
     let datas = load_knapsack("dataset/knapsack/knap_custom.csv")
         .await
         .unwrap();
-    let data = &datas[7];
+    let data = &datas[6];
 
     let ising = knapsack_log_encode(&data).await;
     let y_num = ising.h().len() - data.n();
@@ -222,8 +222,8 @@ async fn main() {
         vec
     };
 
-    let steps = 3e4 as usize;
-    let try_number_of_times = 50;
+    let steps = 3e6 as usize;
+    let try_number_of_times = 30;
     let range_param_start = 3.;
     let range_param_end = 1e-06;
     let T = 0.3;

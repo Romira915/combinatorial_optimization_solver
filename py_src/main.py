@@ -4,6 +4,7 @@ import string
 from lib2to3.pgen2 import token
 
 import dimod
+import numpy as np
 from dotenv import load_dotenv
 from dwave.system import DWaveSampler, EmbeddingComposite
 from numpy import hamming
@@ -70,6 +71,7 @@ q, offset = model.to_qubo()
 # sampler = SQASampler()
 dw_sampler = DWaveSampler(solver='Advantage_system4.1',
                           token=TOKEN, endpoint=endpoint)
+print(dw_sampler.nodelist)
 sampler = EmbeddingComposite(dw_sampler)
 sampleset = sampler.sample_qubo(q, num_reads=2)
 decoded_sample = model.decode_sample(sampleset.first.sample, vartype="BINARY")
@@ -110,6 +112,8 @@ print("合計の価格 : "+str(cost))
 print("ハミング距離 :" + str(d_hamming))
 
 x = sampleset.record[-1][0]
+x = np.append(x, [3 for _ in range(5627-len(x))])
+print(x)
 t = (0, 5, 15, 20)
 s = (1.0, 0.4, 0.4, 1.0)
 
@@ -119,7 +123,7 @@ dw_sampler = DWaveSampler(solver='Advantage_system4.1',
                           token=TOKEN, endpoint=endpoint)
 sampler = EmbeddingComposite(dw_sampler)
 sampleset = sampler.sample_qubo(
-    q, num_reads=10, anneal_schedule=schedule, initial_state=x)
+    q, num_reads=2, anneal_schedule=schedule, initial_state=x)
 print(sampleset.record)
 
 weight = 0
