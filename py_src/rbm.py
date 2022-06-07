@@ -144,9 +144,10 @@ for k in J_dict.keys():
     ans_list.append(sampleset.record.sample)
 
 times_title = [str(k) + '-times' for k in J_dict.keys()]
-# show_img(row=2, col=5, img_list1=ans_list, img_list2=None,
-#          title_list1=times_title, title_list2=None,
-#          subtitle="", subtitlesize=24, figsize=(14, 3))
+show_img(row=1, col=7, img_list1=ans_list, img_list2=None,
+         title_list1=times_title, title_list2=None,
+         subtitle="", subtitlesize=24, figsize=(14, 3))
+plt.show()
 
 # 0-4のデータセットを抽出
 zero_four_index_list = [i for i, x in enumerate(digits.target) if x <= 4]
