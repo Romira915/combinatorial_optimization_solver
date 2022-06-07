@@ -1,11 +1,11 @@
 import os
-from dotenv import load_dotenv
-from dwave.system import DWaveSampler, EmbeddingComposite
 import random
 
 import matplotlib.pyplot as plt
 import numpy as np
 import openjij as oj
+from dotenv import load_dotenv
+from dwave.system import DWaveSampler, EmbeddingComposite
 from openjij import SQASampler
 from sklearn.datasets import load_digits
 from tqdm import tqdm
@@ -44,6 +44,7 @@ raw_data_list = [digits.data[i] for i in zero_index_list]
 show_img(row=1, col=5, img_list1=raw_data_list, img_list2=None,
          title_list1=np.arange(1, 6), title_list2=None,
          subtitle="MNIST zero-dataset", subtitlesize=24, figsize=(14, 3))
+plt.show()
 
 num_data = 50  # 使用するデータの数
 num_spin = len(raw_data_list[0])  # 画像1枚のスピンの数
@@ -61,6 +62,7 @@ edit_title = ['edit-' + str(num) for num in range(1, 6)]
 show_img(row=2, col=5, img_list1=raw_data_list, img_list2=edit_data_list,
          title_list1=raw_title, title_list2=edit_title,
          subtitle="zero-dataset", subtitlesize=20, figsize=(10, 5))
+plt.show()
 
 
 def minus_J(num_spin, J):
@@ -125,11 +127,11 @@ def train_model(Tall, eta, dataset, sampler, sample_params, times):
 
 
 # Openjijの場合
-# sampler = oj.SQASampler()
+sampler = oj.SQASampler()
 
 # D-Waveマシンの場合
-sampler_config = {'solver': 'DW_2000Q_6', 'token': TOKEN}
-sampler = EmbeddingComposite(DWaveSampler(**sampler_config))
+# sampler_config = {'solver': 'DW_2000Q_6', 'token': TOKEN}
+# sampler = EmbeddingComposite(DWaveSampler(**sampler_config))
 
 J_dict, h_dict = train_model(Tall=30, eta=0.001, dataset=edit_data_list,
                              sampler=sampler, sample_params={'beta': 1, 'num_reads': 100}, times=5)
@@ -142,13 +144,13 @@ for k in J_dict.keys():
     ans_list.append(sampleset.record.sample)
 
 times_title = [str(k) + '-times' for k in J_dict.keys()]
-show_img(img_list1=ans_list, img_list2=None,
-         title_list1=times_title, title_list2=None,
-         subtitle="", subtitlesize=24, figsize=(14, 3))
+# show_img(row=2, col=5, img_list1=ans_list, img_list2=None,
+#          title_list1=times_title, title_list2=None,
+#          subtitle="", subtitlesize=24, figsize=(14, 3))
 
 # 0-4のデータセットを抽出
 zero_four_index_list = [i for i, x in enumerate(digits.target) if x <= 4]
-raw_data04_list = [digits.data[i] for i in zero_four_index_lst]
+raw_data04_list = [digits.data[i] for i in zero_four_index_list]
 
 # データの加工
 num_data04 = len(raw_data04_list)
@@ -165,6 +167,7 @@ edit_title = ['edit-' + str(num) for num in range(5)]
 show_img(row=2, col=5, img_list1=raw_data04_list, img_list2=edit_data04_list,
          title_list1=raw_title, title_list2=edit_title,
          subtitle="", subtitlesize=20, figsize=(10, 5))
+plt.show()
 
 target_num = 3
 loss_data = edit_data04_list[target_num].copy()
@@ -178,6 +181,7 @@ vs_list = [edit_data04_list[target_num], loss_data]
 show_img(row=1, col=2, img_list1=vs_list, img_list2=None,
          title_list1=['raw', 'loss'], title_list2=None,
          subtitle="raw vs loss", subtitlesize=20, figsize=(8, 4))
+plt.show()
 
 loss_h = {s: loss_data[s] for s in range(num_spin)}
 
@@ -195,3 +199,4 @@ times_title = ['raw', 'loss'] + [str(k) + '-times' for k in J_loss_dict.keys()]
 show_img(row=1, col=2 + len(J_loss_dict), img_list1=result_list, img_list2='',
          title_list1=times_title, title_list2='',
          subtitle="", subtitlesize=24, figsize=(14, 3))
+plt.show()
