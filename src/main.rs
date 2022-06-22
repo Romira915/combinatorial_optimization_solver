@@ -226,7 +226,7 @@ async fn main() {
     let try_number_of_times = 30;
     let range_param_start = 1.;
     let range_param_end = 1e-06;
-    let T = 1. / 3.;
+    let T = 1000000.;
     let solvers = vec![
         SolverVariant::Sa(SimulatedAnnealing::new(
             range_param_start,
@@ -238,7 +238,7 @@ async fn main() {
         SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
             range_param_start,
             range_param_end,
-            1. / 4.,
+            T,
             steps,
             4,
             Arc::clone(&ising),
@@ -247,7 +247,7 @@ async fn main() {
         SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
             range_param_start,
             range_param_end,
-            1. / 8.,
+            T,
             steps,
             8,
             Arc::clone(&ising),
