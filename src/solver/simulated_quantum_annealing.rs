@@ -163,9 +163,9 @@ impl Solver for SimulatedQuantumAnnealing {
 
         for G in &G_array {
             // local flip
-            for _ in 0..self.P {
+            for k in 0..self.P {
                 let flip_local_index = self.rng.gen_range(0..self.N);
-                let k = self.rng.gen_range(0..self.P);
+                // let k = self.rng.gen_range(0..self.P);
                 // let J_p = -self.PT
                 //     * (G / self.PT).tanh().log(consts::E)
                 //     * (self.spins[[k, flip_local_index]]
@@ -174,7 +174,7 @@ impl Solver for SimulatedQuantumAnnealing {
                 //         as f64;
                 let j_max = self.model.J().fold(0. / 0., |m, v| v.max(m)) * 0.3;
 
-                let B = -self.T / 2. * (1.0 / (G / self.PT).tanh()).log(consts::E) * j_max;
+                let B = -self.T / 2. * (1.0 / (G / self.PT).tanh()).log(consts::E);
                 let delta_E = self.model.calculate_dE(self.spins.row(k), flip_local_index) as f64;
                 let delta_trotter = 2.
                     * B

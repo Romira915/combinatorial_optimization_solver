@@ -202,10 +202,10 @@ async fn main() {
     let mut rng = rand::rngs::StdRng::from_rng(rand::thread_rng()).unwrap();
 
     // let (tsp, ising, max_dist, bias) = tsp_ising(&mut rng);
-    let datas = load_knapsack("dataset/knapsack/knap_custom.csv")
+    let datas = load_knapsack("dataset/knapsack/smallcoeff_pisinger/knapPI_1_100_1000.csv")
         .await
         .unwrap();
-    let data = &datas[6];
+    let data = &datas[0];
 
     let ising = knapsack_log_encode(&data).await;
     let y_num = ising.h().len() - data.n();
@@ -222,8 +222,8 @@ async fn main() {
         vec
     };
 
-    let steps = 3e7 as usize;
-    let try_number_of_times = 10;
+    let steps = 3e6 as usize;
+    let try_number_of_times = 30;
     let range_param_start = 1.;
     let range_param_end = 1e-06;
     let T = 1. / 3.;
@@ -238,7 +238,7 @@ async fn main() {
         SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
             range_param_start,
             range_param_end,
-            T,
+            1. / 4.,
             steps,
             4,
             Arc::clone(&ising),
@@ -247,7 +247,7 @@ async fn main() {
         SolverVariant::Sqa(SimulatedQuantumAnnealing::new(
             range_param_start,
             range_param_end,
-            T,
+            1. / 8.,
             steps,
             8,
             Arc::clone(&ising),
