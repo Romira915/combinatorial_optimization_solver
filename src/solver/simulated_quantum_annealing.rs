@@ -175,7 +175,7 @@ impl Solver for SimulatedQuantumAnnealing {
                 let j_max = self.model.J().fold(0. / 0., |m, v| v.max(m)) * 0.3;
 
                 let B = -self.T / 2. * (1.0 / (G / self.PT).tanh()).log(consts::E);
-                println!("B {}", &B);
+                // println!("B {}", &B);
                 let delta_E = self.model.calculate_dE(self.spins.row(k), flip_local_index) as f64;
                 let delta_trotter = 2.
                     * B
