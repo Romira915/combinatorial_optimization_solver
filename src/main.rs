@@ -205,7 +205,7 @@ async fn main() {
     let datas = load_knapsack("dataset/knapsack/knap_custom.csv")
         .await
         .unwrap();
-    let data = &datas[3];
+    let data = &datas[6];
 
     let ising = knapsack_log_encode(&data).await;
     let y_num = ising.h().len() - data.n();
