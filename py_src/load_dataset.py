@@ -47,8 +47,8 @@ def parse_knapsack_data(data: list[str]) -> KnapsackData:
 
     for i in range(5, n + 5):
         index, cost, weight, selected = data[i].split(",")
-        cost_list.append(cost)
-        weight_list.append(weight)
-        optimum_state.append(selected)
+        cost_list.append(int(cost))
+        weight_list.append(int(weight))
+        optimum_state.append(int(selected))
 
     return KnapsackData(dataset_name, n, c, opt_value, cost_list, weight_list, optimum_state)
