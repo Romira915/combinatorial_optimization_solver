@@ -1,3 +1,4 @@
 {
-    "codic.case": "snake_case"
+    "codic.case": "snake_case",
+    "python.analysis.typeCheckingMode": "off"
 }
