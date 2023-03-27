@@ -1,7 +1,7 @@
 
 
 class KnapsackData:
-    def __init__(self, name: str, n: int, capacity: int, opt_value: int, cost_list: list[int], weight_list: list[int], opt_state: list[int]) -> None:
+    def __init__(self, name: str, n: int, capacity: int, opt_value: float, cost_list: list[float], weight_list: list[float], opt_state: list[int]) -> None:
         self.dataset_name = name
         self.n = n
         self.capacity = capacity
@@ -38,7 +38,7 @@ def parse_knapsack_data(data: list[str]) -> KnapsackData:
     c = int(data[2].split(" ")[1])
     opt_value = None
     try:
-        opt_value = int(data[3].split(" ")[1])
+        opt_value = float(data[3].split(" ")[1])
     except ValueError:
         opt_value = None
     cost_list = []
@@ -47,8 +47,8 @@ def parse_knapsack_data(data: list[str]) -> KnapsackData:
 
     for i in range(5, n + 5):
         index, cost, weight, selected = data[i].split(",")
-        cost_list.append(int(cost))
-        weight_list.append(int(weight))
-        optimum_state.append(int(selected))
+        cost_list.append(float(cost))
+        weight_list.append(float(weight))
+        optimum_state.append(float(selected))
 
     return KnapsackData(dataset_name, n, c, opt_value, cost_list, weight_list, optimum_state)
